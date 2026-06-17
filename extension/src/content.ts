@@ -170,15 +170,23 @@ function setReactValue(el: HTMLInputElement | HTMLTextAreaElement, value: string
   el.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
-async function autofillFromMapping(mapping: Record<string, { value: unknown; source: string }>) {
+async function autofillFromMapping(mapping: Record<string, unknown>) {
   for (const el of document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
     "input, textarea, select",
   )) {
     const key = el.id ? `id:${el.id}` : el.name ? `name:${el.name}` : null;
     if (!key) continue;
     const entry = mapping[key];
-    if (!entry || entry.value === null || entry.value === undefined) continue;
-    const value = String(entry.value);
+    if (entry === null || entry === undefined) continue;
+    // Accept both shapes: flat value string OR object { value, source }
+    let raw: unknown;
+    if (typeof entry === "object" && entry !== null && "value" in (entry as object)) {
+      raw = (entry as { value: unknown }).value;
+    } else {
+      raw = entry;
+    }
+    if (raw === null || raw === undefined || raw === "") continue;
+    const value = String(raw);
     if (el instanceof HTMLSelectElement) {
       el.value = value;
       el.dispatchEvent(new Event("change", { bubbles: true }));
@@ -202,7 +210,7 @@ function debounce<T extends (...args: never[]) => unknown>(fn: T, ms: number): T
 // Message handler: popup asks to apply a mapping
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type === "APPLY_MAPPING") {
-    void autofillFromMapping(msg.mapping as Record<string, { value: unknown; source: string }>);
+    void autofillFromMapping((msg.mapping ?? {}) as Record<string, unknown>);
     sendResponse({ ok: true });
     return true;
   }
