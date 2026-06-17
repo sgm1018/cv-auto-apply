@@ -730,6 +730,66 @@ async function loadProfile() {
     } else {
       setField("pf-skills", "");
     }
+    // Location
+    if (p.location) {
+      setField("pf-city", p.location.city);
+      setField("pf-region", p.location.region);
+      setField("pf-country", p.location.country);
+      setField("pf-country-code", p.location.country_code);
+    }
+    // Languages
+    if (p.languages && p.languages.length > 0) {
+      setField("pf-languages", p.languages.map(function (l) { return l.name + ": " + l.level; }).join(", "));
+    } else {
+      setField("pf-languages", "");
+    }
+    // Work experience cards
+    var expList = document.getElementById("pf-exp-list");
+    var expCount = document.getElementById("pf-exp-count");
+    if (expList && p.work_experience && p.work_experience.length > 0) {
+      if (expCount) expCount.textContent = "(" + p.work_experience.length + ")";
+      expList.innerHTML = p.work_experience.map(function (e) {
+        var period = e.start_date ? (e.start_date + " \u2013 " + (e.current ? "present" : (e.end_date || ""))) : "";
+        return '<div style="padding:6px 0; border-bottom:1px solid var(--ink-100);">' +
+          '<div style="font-weight:600; font-size:12px;">' + escapeHtml(e.title) + '</div>' +
+          '<div class="muted" style="font-size:11px;">' + escapeHtml(e.company) + (e.location ? " \u00b7 " + escapeHtml(e.location) : "") + '</div>' +
+          (period ? '<div class="muted" style="font-size:10px;">' + period + '</div>' : "") +
+        '</div>';
+      }).join("");
+    } else if (expList) {
+      if (expCount) expCount.textContent = "";
+      expList.innerHTML = '<p class="muted" style="text-align:center;">No work experience</p>';
+    }
+    // Education cards
+    var eduList = document.getElementById("pf-edu-list");
+    var eduCount = document.getElementById("pf-edu-count");
+    if (eduList && p.education && p.education.length > 0) {
+      if (eduCount) eduCount.textContent = "(" + p.education.length + ")";
+      eduList.innerHTML = p.education.map(function (e) {
+        return '<div style="padding:6px 0; border-bottom:1px solid var(--ink-100);">' +
+          '<div style="font-weight:600; font-size:12px;">' + escapeHtml(e.institution) + '</div>' +
+          '<div class="muted" style="font-size:11px;">' + escapeHtml(e.degree || "") + (e.field ? " in " + escapeHtml(e.field) : "") + '</div>' +
+        '</div>';
+      }).join("");
+    } else if (eduList) {
+      if (eduCount) eduCount.textContent = "";
+      eduList.innerHTML = '<p class="muted" style="text-align:center;">No education</p>';
+    }
+    // Certifications cards
+    var certList = document.getElementById("pf-cert-list");
+    var certCount = document.getElementById("pf-cert-count");
+    if (certList && p.certifications && p.certifications.length > 0) {
+      if (certCount) certCount.textContent = "(" + p.certifications.length + ")";
+      certList.innerHTML = p.certifications.map(function (c) {
+        return '<div style="padding:6px 0; border-bottom:1px solid var(--ink-100);">' +
+          '<div style="font-weight:600; font-size:12px;">' + escapeHtml(c.name) + '</div>' +
+          '<div class="muted" style="font-size:11px;">' + escapeHtml(c.issuer || "") + (c.issue_date ? " \u00b7 " + c.issue_date : "") + '</div>' +
+        '</div>';
+      }).join("");
+    } else if (certList) {
+      if (certCount) certCount.textContent = "";
+      certList.innerHTML = '<p class="muted" style="text-align:center;">No certifications</p>';
+    }
   } catch (_e) { /* silent */ }
 }
 
@@ -760,6 +820,11 @@ async function saveProfile() {
   };
   var skillsStr = getStr("pf-skills");
   var skills = skillsStr ? skillsStr.split(",").map(function (s) { return s.trim(); }).filter(Boolean) : [];
+  var langStr = getStr("pf-languages");
+  var languages = langStr ? langStr.split(",").map(function (s) { return s.trim(); }).filter(Boolean).map(function (entry) {
+    var parts = entry.split(":");
+    return { name: (parts[0] || "").trim(), level: (parts[1] || "native").trim() };
+  }) : [];
   var sourceSel = document.getElementById("pf-source-cv");
   var body = {
     first_name: getStr("pf-first-name") || null,
@@ -771,6 +836,13 @@ async function saveProfile() {
     portfolio_url: getStr("pf-portfolio") || null,
     summary: getStr("pf-summary") || null,
     skills: skills,
+    languages: languages,
+    location: {
+      city: getStr("pf-city") || null,
+      region: getStr("pf-region") || null,
+      country: getStr("pf-country") || null,
+      country_code: getStr("pf-country-code") || null,
+    },
     source_cv_id: sourceSel ? sourceSel.value || null : null,
   };
   var statusEl = document.getElementById("pf-status");

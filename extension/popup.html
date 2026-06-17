@@ -45,7 +45,8 @@
     }
 
     * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; }
+    html { margin: 0; padding: 0; border-radius: 14px; overflow: hidden; }
+    body { margin: 0; padding: 0; }
 
     body {
       width: 380px;
@@ -421,6 +422,12 @@
     /* ------------------------------------------------------------------
        Reduced motion
        ------------------------------------------------------------------ */
+    /* Custom scrollbar — thin, blue-tinted, matches brand */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--blue-200); border-radius: 999px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--blue-300); }
+
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
         animation-duration: 0.01ms !important;
@@ -653,6 +660,44 @@
           <div class="field">
             <label class="label" for="pf-skills">Skills <span class="muted">(comma separated)</span></label>
             <input class="input" id="pf-skills" type="text" placeholder="Python, React, AWS, Docker" />
+          </div>
+          <h2 style="margin-top:16px;">Location</h2>
+          <div class="field">
+            <label class="label" for="pf-city">City</label>
+            <input class="input" id="pf-city" type="text" placeholder="Madrid" />
+          </div>
+          <div class="field">
+            <label class="label" for="pf-region">Region / State</label>
+            <input class="input" id="pf-region" type="text" placeholder="Madrid" />
+          </div>
+          <div class="field">
+            <label class="label" for="pf-country">Country</label>
+            <input class="input" id="pf-country" type="text" placeholder="Spain" />
+          </div>
+          <div class="field">
+            <label class="label" for="pf-country-code">Country code</label>
+            <input class="input" id="pf-country-code" type="text" placeholder="ES" style="width:80px;" />
+          </div>
+
+          <h2 style="margin-top:16px;">Work experience <span class="muted" id="pf-exp-count"></span></h2>
+          <div class="card" id="pf-exp-list" style="padding:8px 10px; max-height:150px; overflow-y:auto;">
+            <p class="muted" style="text-align:center;">Loading...</p>
+          </div>
+
+          <h2 style="margin-top:16px;">Education <span class="muted" id="pf-edu-count"></span></h2>
+          <div class="card" id="pf-edu-list" style="padding:8px 10px; max-height:120px; overflow-y:auto;">
+            <p class="muted" style="text-align:center;">Loading...</p>
+          </div>
+
+          <h2 style="margin-top:16px;">Certifications <span class="muted" id="pf-cert-count"></span></h2>
+          <div class="card" id="pf-cert-list" style="padding:8px 10px; max-height:120px; overflow-y:auto;">
+            <p class="muted" style="text-align:center;">Loading...</p>
+          </div>
+
+          <h2 style="margin-top:16px;">Languages</h2>
+          <div class="field">
+            <label class="label" for="pf-languages">Languages <span class="muted">(comma separated, e.g. "Spanish: native, English: fluent")</span></label>
+            <input class="input" id="pf-languages" type="text" placeholder="Spanish: native, English: fluent" />
           </div>
           <button class="btn btn-primary" id="pf-save">
             Save profile

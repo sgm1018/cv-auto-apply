@@ -182,6 +182,7 @@ def _meta(c) -> CVMetadata:
         size_bytes=c.size_bytes,
         is_primary=c.is_primary,
         parse_status=c.parse_status,
+        parsed_data=c.parsed_data,
         parse_error=c.parse_error,
         uploaded_at=c.uploaded_at,
         parsed_at=c.parsed_at,
