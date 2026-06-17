@@ -70,6 +70,6 @@ async def me(user: User = Depends(get_current_user)) -> MeResponse:
         email=user.email,
         language=user.settings.get("language", "en"),
         llm_provider=user.settings.get("llm_provider", "deepseek"),
-        llm_model=user.settings.get("llm_model", "deepseek-v4-flash"),
+        llm_model=user.settings.get("llm_model", "deepseek-chat"),
         llm_enabled=user.settings.get("llm_enabled", True),
     )

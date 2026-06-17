@@ -38,7 +38,7 @@ def test_register_and_get_me(app_client: TestClient) -> None:
     assert r.status_code == 200
     assert r.json()["email"] == "a@b.com"
     assert r.json()["llm_provider"] == "deepseek"
-    assert r.json()["llm_model"] == "deepseek-v4-flash"
+    assert r.json()["llm_model"] == "deepseek-chat"
 
 
 def test_register_then_profile_patch(app_client: TestClient) -> None:

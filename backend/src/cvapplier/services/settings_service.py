@@ -7,7 +7,7 @@ from cvapplier.services.encryption import decrypt_api_key, encrypt_api_key
 
 
 VALID_MODELS = {
-    "deepseek": ["deepseek-v4-flash"],
+    "deepseek": ["deepseek-chat"],
     "openai": ["gpt-4o-mini", "gpt-4.1-mini"],
     "anthropic": ["claude-3-5-haiku-20241022"],
     "ollama": ["llama3.1:8b-instruct-q4_K_M", "qwen2.5:7b-instruct-q4_K_M"],
@@ -26,7 +26,7 @@ class SettingsService:
             "autofill_mode": s.get("autofill_mode", "review"),
             "llm_enabled": s.get("llm_enabled", True),
             "llm_provider": s.get("llm_provider", "deepseek"),
-            "llm_model": s.get("llm_model", "deepseek-v4-flash"),
+            "llm_model": s.get("llm_model", "deepseek-chat"),
             "llm_api_key_set": bool(s.get("llm_api_key_enc")),
             "ollama_base_url": s.get("ollama_base_url"),
             "custom_endpoint": s.get("custom_endpoint"),

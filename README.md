@@ -56,7 +56,7 @@ uvicorn cvapplier.main:app --reload --port 8000
 ```bash
 cd extension
 npm install
-npm run dev
+npm run build
 # Load unpacked in chrome://extensions -> .output/chrome-mv3
 ```
 

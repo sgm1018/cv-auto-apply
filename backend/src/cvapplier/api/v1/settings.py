@@ -30,7 +30,7 @@ async def llm_test(user: User = Depends(get_current_user)) -> LLMTestResponse:
     api_key = SettingsService().decrypt_api_key(user)
     gw = LLMGateway(
         provider=user.settings.get("llm_provider", "deepseek"),
-        model=user.settings.get("llm_model", "deepseek-v4-flash"),
+        model=user.settings.get("llm_model", "deepseek-chat"),
         api_key=api_key,
         api_base=user.settings.get("ollama_base_url") or user.settings.get("custom_endpoint"),
     )

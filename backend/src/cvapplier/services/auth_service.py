@@ -30,7 +30,7 @@ def default_settings() -> dict:
         "autofill_mode": "review",
         "llm_enabled": True,
         "llm_provider": "deepseek",
-        "llm_model": "deepseek-v4-flash",
+        "llm_model": "deepseek-chat",
         "llm_api_key_enc": None,
         "ollama_base_url": None,
         "custom_endpoint": None,
