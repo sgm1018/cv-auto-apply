@@ -13,6 +13,7 @@ from cvapplier.core.security import (
     hash_refresh_token,
     verify_password,
 )
+from cvapplier.models.profile import Profile
 from cvapplier.models.user import User
 from cvapplier.repositories.user_repository import UserRepository
 
@@ -55,6 +56,11 @@ class AuthService:
         user = await self.repo.create(
             email=email, password_hash=hash_password(password), settings=settings,
         )
+        # Auto-create an empty profile so the cascade doesn't fail on first use
+        existing = await Profile.find_one(Profile.user_id == user.id)
+        if existing is None:
+            p = Profile(user_id=user.id, email=email)
+            await p.insert()
         return await self._issue(user)
 
     async def login(self, email: str, password: str) -> AuthResult:

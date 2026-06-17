@@ -4,11 +4,17 @@ from fastapi.responses import Response
 
 from cvapplier.core.deps import get_current_user
 from cvapplier.core.exceptions import NotFoundError
+from cvapplier.models.cv import CV
 from cvapplier.models.user import User
 from cvapplier.repositories.cv_repository import CVRepository
 from cvapplier.schemas.cv_metadata import CVMetadata
+from cvapplier.schemas.cv_parse import CVParseResponse
 from cvapplier.schemas.cv_upload import CVUploadResponse
+from cvapplier.services.cv_parser_service import CVParserService
 from cvapplier.services.cv_service import CVService
+from cvapplier.services.profile_service import ProfileService
+from cvapplier.services.settings_service import SettingsService
+from cvapplier.utils.time import utcnow
 
 router = APIRouter(prefix="/cvs", tags=["cvs"])
 
@@ -69,6 +75,59 @@ async def set_primary(cv_id: str, user: User = Depends(get_current_user)) -> dic
 async def delete_cv(cv_id: str, user: User = Depends(get_current_user)) -> dict:
     await CVService().delete(user_id=str(user.id), cv_id=cv_id)
     return {"ok": True}
+
+
+@router.post("/{cv_id}/parse", response_model=CVParseResponse)
+async def parse_cv(cv_id: str, user: User = Depends(get_current_user)) -> CVParseResponse:
+    repo = CVRepository()
+    cv = await repo.get_for_user(str(user.id), cv_id)
+    if cv is None:
+        raise NotFoundError("CV not found")
+    cv.parse_status = "processing"
+    await cv.save()
+    try:
+        data = await CVService().download(user_id=str(user.id), cv_id=cv_id)
+        text = CVParserService.extract_text(cv.mime_type, data)
+        api_key = SettingsService().decrypt_api_key(user)
+        parsed = await CVParserService.parse_with_llm(
+            provider=user.settings.get("llm_provider", "deepseek"),
+            model=user.settings.get("llm_model", "deepseek-chat"),
+            api_key=api_key,
+            api_base=user.settings.get("ollama_base_url") or user.settings.get("custom_endpoint"),
+            text=text,
+        )
+        cv.parse_status = "done"
+        cv.parsed_data = parsed
+        cv.parsed_at = utcnow()
+        await cv.save()
+        return CVParseResponse(
+            cv_id=str(cv.id),
+            parse_status="done",
+            parsed_data=parsed,
+        )
+    except Exception as e:
+        cv.parse_status = "failed"
+        cv.parse_error = str(e)[:500]
+        await cv.save()
+        return CVParseResponse(
+            cv_id=str(cv.id),
+            parse_status="failed",
+            parse_error=str(e)[:500],
+        )
+
+
+@router.post("/{cv_id}/confirm")
+async def confirm_parse(cv_id: str, user: User = Depends(get_current_user)) -> dict:
+    repo = CVRepository()
+    cv = await repo.get_for_user(str(user.id), cv_id)
+    if cv is None:
+        raise NotFoundError("CV not found")
+    if not cv.parsed_data:
+        raise NotFoundError("CV has not been parsed yet")
+    patch = {k: v for k, v in cv.parsed_data.items() if v is not None}
+    await ProfileService().update(str(user.id), patch)
+    return {"ok": True}
+
 
 
 def _meta(c) -> CVMetadata:

@@ -601,10 +601,55 @@
         <h1>Settings</h1>
 
         <div class="tabs">
-          <div class="tab active" data-tab="general">General</div>
+          <div class="tab active" data-tab="profile">Profile</div>
+          <div class="tab" data-tab="general">General</div>
           <div class="tab" data-tab="llm">LLM</div>
           <div class="tab" data-tab="cvs">CVs</div>
           <div class="tab" data-tab="account">Account</div>
+        </div>
+
+        <div id="tab-profile" class="tab-panel">
+          <div class="field">
+            <label class="label" for="pf-first-name">First name</label>
+            <input class="input" id="pf-first-name" type="text" placeholder="Jane" />
+          </div>
+          <div class="field">
+            <label class="label" for="pf-last-name">Last name</label>
+            <input class="input" id="pf-last-name" type="text" placeholder="Doe" />
+          </div>
+          <div class="field">
+            <label class="label" for="pf-email">Email</label>
+            <input class="input" id="pf-email" type="email" placeholder="jane@company.com" />
+          </div>
+          <div class="field">
+            <label class="label" for="pf-phone">Phone</label>
+            <input class="input" id="pf-phone" type="text" placeholder="+1 555 123 4567" />
+          </div>
+          <div class="field">
+            <label class="label" for="pf-linkedin">LinkedIn URL</label>
+            <input class="input" id="pf-linkedin" type="url" placeholder="https://linkedin.com/in/janedoe" />
+          </div>
+          <div class="field">
+            <label class="label" for="pf-github">GitHub URL</label>
+            <input class="input" id="pf-github" type="url" placeholder="https://github.com/janedoe" />
+          </div>
+          <div class="field">
+            <label class="label" for="pf-portfolio">Portfolio URL</label>
+            <input class="input" id="pf-portfolio" type="url" placeholder="https://janedoe.dev" />
+          </div>
+          <div class="field">
+            <label class="label" for="pf-summary">Summary</label>
+            <input class="input" id="pf-summary" type="text" placeholder="Senior software engineer..." />
+          </div>
+          <div class="field">
+            <label class="label" for="pf-skills">Skills <span class="muted">(comma separated)</span></label>
+            <input class="input" id="pf-skills" type="text" placeholder="Python, React, AWS, Docker" />
+          </div>
+          <button class="btn btn-primary" id="pf-save">
+            Save profile
+            <span aria-hidden="true">→</span>
+          </button>
+          <p class="muted mt-12" id="pf-status" style="min-height:14px;"></p>
         </div>
 
         <div id="tab-general" class="tab-panel">

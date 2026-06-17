@@ -20,9 +20,12 @@ function activateTab(name) {
   for (const t of document.querySelectorAll(".tab")) {
     t.classList.toggle("active", t.dataset.tab === name);
   }
-  for (const p of ["general", "llm", "cvs", "account"]) {
+  for (const p of ["profile", "general", "llm", "cvs", "account"]) {
     const el = document.getElementById("tab-" + p);
     if (el) el.classList.toggle("hidden", p !== name);
+  }
+  if (name === "profile") {
+    loadProfile();
   }
   if (name === "cvs") {
     loadCVs();
@@ -188,6 +191,27 @@ function renderCVs(cvs) {
     const primaryBtn = cv.is_primary
       ? ""
       : '<button class="link-btn" data-action="primary" data-id="' + cv.cv_id + '" style="font-size:12px;">Set primary</button>';
+    // Parse action button
+    var parseBtn = "";
+    var previewHtml = "";
+    if (cv.parse_status === "pending" || cv.parse_status === "failed") {
+      parseBtn = '<button class="link-btn" data-action="parse" data-id="' + cv.cv_id + '" style="font-size:12px; color:var(--blue-600);">Parse</button>';
+    } else if (cv.parse_status === "done" && cv.parsed_data) {
+      var fields = [];
+      var d = cv.parsed_data;
+      if (d.first_name || d.last_name) fields.push(d.first_name + " " + d.last_name);
+      if (d.email) fields.push(d.email);
+      if (d.phone) fields.push(d.phone);
+      if (d.skills && d.skills.length) fields.push("Skills: " + d.skills.length);
+      if (d.work_experience && d.work_experience.length) fields.push("Exp: " + d.work_experience.length + " positions");
+      if (d.education && d.education.length) fields.push("Edu: " + d.education.length);
+      previewHtml =
+        '<div style="margin-top:8px; padding:8px; background:var(--ink-100); border-radius:8px; font-size:11px; color:var(--ink-700);">' +
+          '<div style="font-weight:600; margin-bottom:4px;">Parsed data:</div>' +
+          fields.map(function (f) { return '<div style="margin:2px 0;">\u2022 ' + escapeHtml(f) + '</div>'; }).join("") +
+          '<button class="btn btn-primary" data-action="confirm" data-id="' + cv.cv_id + '" style="margin-top:8px; font-size:12px; padding:6px 10px;">Confirm & save to profile</button>' +
+        '</div>';
+    }
     return (
       '<div class="card" style="padding:10px 12px; margin-bottom:8px;">' +
         '<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">' +
@@ -195,8 +219,10 @@ function renderCVs(cvs) {
             '<div style="font-weight:600; font-size:13px; word-break:break-all;">' + escapeHtml(cv.filename) + '</div>' +
             '<div class="muted" style="font-size:11px; margin-top:2px;">' + sizeKb + ' KB \u00b7 ' + escapeHtml(cv.mime_type) + '</div>' +
             '<div style="margin-top:6px; display:flex; gap:4px; flex-wrap:wrap;">' + primaryBadge + statusBadge + '</div>' +
+            previewHtml +
           '</div>' +
           '<div style="display:flex; flex-direction:column; gap:4px; align-items:flex-end;">' +
+            parseBtn +
             primaryBtn +
             '<button class="link-btn" data-action="delete" data-id="' + cv.cv_id + '" style="font-size:12px; color:#b91c1c;">Delete</button>' +
           '</div>' +
@@ -291,7 +317,7 @@ function wireEvents() {
   if (gotoSettings) {
     gotoSettings.addEventListener("click", function () {
       showView("settings");
-      activateTab("general");
+      activateTab("profile");
     });
   }
 
@@ -363,6 +389,10 @@ function wireEvents() {
   // Save LLM settings
   const setSaveLlm = document.getElementById("set-save-llm");
   if (setSaveLlm) setSaveLlm.addEventListener("click", function () { saveLLMSettings(); });
+
+  // Save profile
+  const pfSave = document.getElementById("pf-save");
+  if (pfSave) pfSave.addEventListener("click", async function () { await saveProfile(); });
 
   // Test connection
   const setTest = document.getElementById("set-test");
@@ -477,6 +507,39 @@ function wireEvents() {
           } else {
             target.disabled = false;
             toast("Delete failed", "err");
+          }
+        } else if (action === "parse") {
+          target.disabled = true;
+          target.textContent = "Parsing\u2026";
+          toast("Parsing CV with LLM\u2026", "ok");
+          const res = await fetch("http://localhost:8000/api/v1/cvs/" + cvId + "/parse", {
+            method: "POST",
+            headers: { Authorization: "Bearer " + token },
+          });
+          if (res.ok) {
+            toast("CV parsed", "ok");
+            await loadCVs();
+          } else {
+            target.disabled = false;
+            target.textContent = "Parse";
+            const data = await res.json().catch(function () { return {}; });
+            toast(data.parse_error || "Parse failed", "err");
+          }
+        } else if (action === "confirm") {
+          if (!confirm("Save parsed data to your profile?")) return;
+          target.disabled = true;
+          target.textContent = "Saving\u2026";
+          const res = await fetch("http://localhost:8000/api/v1/cvs/" + cvId + "/confirm", {
+            method: "POST",
+            headers: { Authorization: "Bearer " + token },
+          });
+          if (res.ok) {
+            toast("Profile updated from CV", "ok");
+            await loadCVs();
+          } else {
+            target.disabled = false;
+            target.textContent = "Confirm & save to profile";
+            toast("Confirm failed", "err");
           }
         }
       } catch (err) {
@@ -595,6 +658,71 @@ async function saveLLMSettings() {
     }
   } catch (_e) {
     flashStatus("Save failed", "err");
+  }
+}
+
+async function loadProfile() {
+  const token = await getToken();
+  if (!token) return;
+  try {
+    const res = await fetch("http://localhost:8000/api/v1/profile", {
+      headers: { Authorization: "Bearer " + token },
+    });
+    if (!res.ok) return;
+    const p = await res.json();
+    const setField = function (id, val) {
+      const el = document.getElementById(id);
+      if (el) el.value = val || "";
+    };
+    setField("pf-first-name", p.first_name);
+    setField("pf-last-name", p.last_name);
+    setField("pf-email", p.email);
+    setField("pf-phone", p.phone);
+    setField("pf-linkedin", p.linkedin_url);
+    setField("pf-github", p.github_url);
+    setField("pf-portfolio", p.portfolio_url);
+    setField("pf-summary", p.summary);
+    if (p.skills && p.skills.length > 0) {
+      setField("pf-skills", p.skills.join(", "));
+    }
+  } catch (_e) { /* silent */ }
+}
+
+async function saveProfile() {
+  const token = await getToken();
+  if (!token) { toast("Please sign in first", "err"); return; }
+  const getStr = function (id) {
+    const el = document.getElementById(id);
+    return el ? el.value.trim() : "";
+  };
+  const skillsStr = getStr("pf-skills");
+  const skills = skillsStr ? skillsStr.split(",").map(function (s) { return s.trim(); }).filter(Boolean) : [];
+  const body = {
+    first_name: getStr("pf-first-name") || null,
+    last_name: getStr("pf-last-name") || null,
+    email: getStr("pf-email") || null,
+    phone: getStr("pf-phone") || null,
+    linkedin_url: getStr("pf-linkedin") || null,
+    github_url: getStr("pf-github") || null,
+    portfolio_url: getStr("pf-portfolio") || null,
+    summary: getStr("pf-summary") || null,
+    skills: skills,
+  };
+  const statusEl = document.getElementById("pf-status");
+  try {
+    const res = await fetch("http://localhost:8000/api/v1/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+      body: JSON.stringify(body),
+    });
+    if (res.ok) {
+      if (statusEl) { statusEl.textContent = "\u2713 Profile saved"; statusEl.style.color = "#047857"; }
+    } else {
+      const data = await res.json().catch(function () { return {}; });
+      if (statusEl) { statusEl.textContent = "\u2717 " + (data.message || "Save failed"); statusEl.style.color = "#b91c1c"; }
+    }
+  } catch (_e) {
+    if (statusEl) { statusEl.textContent = "\u2717 Cannot reach server"; statusEl.style.color = "#b91c1c"; }
   }
 }
 
