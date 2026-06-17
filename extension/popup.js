@@ -457,6 +457,16 @@ function wireEvents() {
     });
   }
 
+  // Add work experience entry
+  var pfExpAdd = document.getElementById("pf-exp-add");
+  if (pfExpAdd) {
+    pfExpAdd.addEventListener("click", function () {
+      var current = collectExpCards();
+      current.push({ company: "", title: "", start_date: "", end_date: "", current: false, location: "", description: "" });
+      renderExpCards(current);
+    });
+  }
+
   // Delegated delete for education/certification cards
   var pfEduCards = document.getElementById("pf-edu-cards");
   if (pfEduCards) {
@@ -487,6 +497,22 @@ function wireEvents() {
           current.splice(idx, 1);
         }
         renderCertCards(current);
+      }
+    });
+  }
+  var pfExpCards = document.getElementById("pf-exp-cards");
+  if (pfExpCards) {
+    pfExpCards.addEventListener("click", function (e) {
+      var btn = e.target;
+      if (!(btn instanceof HTMLElement)) return;
+      if (btn.dataset.action === "del-exp") {
+        var current = collectExpCards();
+        var card = btn.closest(".card");
+        if (card && card.dataset.expIdx !== undefined) {
+          var idx = parseInt(card.dataset.expIdx, 10);
+          current.splice(idx, 1);
+        }
+        renderExpCards(current);
       }
     });
   }
@@ -814,18 +840,8 @@ async function loadProfile() {
     } else {
       setField("pf-languages", "");
     }
-    // Work experience textarea
-    var expCount = document.getElementById("pf-exp-count");
-    var expTextarea = document.getElementById("pf-exp-textarea");
-    if (expTextarea && p.work_experience && p.work_experience.length > 0) {
-      if (expCount) expCount.textContent = "(" + p.work_experience.length + ")";
-      expTextarea.value = p.work_experience.map(function (e) {
-        return [e.company || "", e.title || "", e.start_date || "", e.end_date || "", String(e.current || false), e.location || "", e.description || ""].join(" | ");
-      }).join("\n");
-    } else if (expTextarea) {
-      if (expCount) expCount.textContent = "";
-      expTextarea.value = "";
-    }
+    // Work experience cards
+    renderExpCards(p.work_experience || []);
     // Education cards
     renderEduCards(p.education || []);
     // Certifications cards
@@ -1116,6 +1132,64 @@ function collectCertCards() {
       name: name,
       issuer: ((c.querySelector(".pf-cert-issuer") || {}).value || "") || null,
       issue_date: ((c.querySelector(".pf-cert-date") || {}).value || "") || null,
+    });
+  }
+  return result;
+}
+
+function renderExpCards(items) {
+  var container = document.getElementById("pf-exp-cards");
+  var count = document.getElementById("pf-exp-count");
+  if (!container) return;
+  if (count) count.textContent = items.length > 0 ? "(" + items.length + ")" : "";
+  container.innerHTML = items.map(function (e, i) {
+    if (!e.current) e.current = false;
+    return (
+      '<div class="card" style="padding:8px; margin-bottom:6px;" data-exp-idx="' + i + '">' +
+        '<div class="cf-row">' +
+          '<span class="cf-label">Company</span>' +
+          '<input class="cf-input pf-exp-company" style="flex:2;" value="' + escapeHtml(e.company || "") + '" placeholder="Company" />' +
+          '<span class="cf-label">Title</span>' +
+          '<input class="cf-input pf-exp-title" style="flex:2;" value="' + escapeHtml(e.title || "") + '" placeholder="Job title" />' +
+          '<button class="cf-del" data-action="del-exp">&times;</button>' +
+        '</div>' +
+        '<div class="cf-row">' +
+          '<span class="cf-label">Start</span>' +
+          '<input class="cf-input pf-exp-start" style="width:90px;" value="' + escapeHtml(e.start_date || "") + '" placeholder="YYYY-MM" />' +
+          '<span class="cf-label">End</span>' +
+          '<input class="cf-input pf-exp-end" style="width:90px;" value="' + escapeHtml(e.end_date || "") + '" placeholder="YYYY-MM" />' +
+          '<label style="display:flex; align-items:center; gap:4px; font-size:11px; cursor:pointer;">' +
+            '<input type="checkbox" class="pf-exp-current"' + (e.current ? " checked" : "") + ' /> Current' +
+          '</label>' +
+        '</div>' +
+        '<div class="cf-row">' +
+          '<span class="cf-label">Location</span>' +
+          '<input class="cf-input pf-exp-location" value="' + escapeHtml(e.location || "") + '" placeholder="City, Country" />' +
+        '</div>' +
+        '<div class="cf-row" style="align-items:flex-start;">' +
+          '<span class="cf-label">Desc</span>' +
+          '<input class="cf-input pf-exp-desc" style="flex:1;" value="' + escapeHtml(e.description || "") + '" placeholder="Brief description" />' +
+        '</div>' +
+      '</div>'
+    );
+  }).join("");
+}
+
+function collectExpCards() {
+  var cards = document.querySelectorAll("#pf-exp-cards .card");
+  var result = [];
+  for (var i = 0; i < cards.length; i++) {
+    var c = cards[i];
+    var company = (c.querySelector(".pf-exp-company") || {}).value || "";
+    if (!company) continue;
+    result.push({
+      company: company,
+      title: ((c.querySelector(".pf-exp-title") || {}).value || "") || null,
+      start_date: ((c.querySelector(".pf-exp-start") || {}).value || "") || null,
+      end_date: ((c.querySelector(".pf-exp-end") || {}).value || "") || null,
+      current: !!(c.querySelector(".pf-exp-current") || {}).checked,
+      location: ((c.querySelector(".pf-exp-location") || {}).value || "") || null,
+      description: ((c.querySelector(".pf-exp-desc") || {}).value || "") || null,
     });
   }
   return result;

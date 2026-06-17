@@ -59,6 +59,8 @@
       overflow-x: hidden;
       font-size: 14px;
       -webkit-font-smoothing: antialiased;
+      display: flex;
+      flex-direction: column;
     }
 
     /* custom scrollbar */
@@ -83,7 +85,9 @@
       position: relative;
       min-height: 520px;
       isolation: isolate;
-      overflow: hidden;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
     }
 
     /* depth-0: deep blue gradient backdrop */
@@ -130,6 +134,9 @@
     .content {
       position: relative; z-index: 3;
       padding: 28px 22px 22px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
     }
 
     /* depth-5: foreground sparkles */
@@ -305,7 +312,7 @@
        View transitions
        ------------------------------------------------------------------ */
     .view { display: none; animation: viewIn 0.45s var(--easing); }
-    .view.active { display: block; }
+    .view.active { display: flex; flex-direction: column; flex: 1; }
     @keyframes viewIn {
       from { opacity: 0; transform: translateY(8px); }
       to { opacity: 1; transform: translateY(0); }
@@ -336,6 +343,7 @@
       color: var(--ink-900);
       box-shadow: 0 1px 3px rgba(0,0,0,0.06);
     }
+    .tab-panel { display: block; flex: 1; overflow-y: auto; }
 
     /* ------------------------------------------------------------------
        Fill view progress
@@ -739,10 +747,8 @@
           </div>
 
           <h2 style="margin-top:16px;">Work experience <span class="muted" id="pf-exp-count"></span></h2>
-          <div class="field">
-            <label class="label" for="pf-exp-textarea">One per line: <span class="muted">Company | Title | Start (YYYY-MM-DD) | End (YYYY-MM-DD or blank) | Current (true/false) | Location | Description</span></label>
-            <textarea class="input" id="pf-exp-textarea" rows="6" style="resize:vertical; min-height:80px; font-size:11px; font-family:monospace; line-height:1.5;" placeholder="TCH Labs | Head of Dev | 2024-01 | | true | Spain | Leading dev team...&#10;CSA | DevOps | 2023-01 | 2024-01 | false | Spain | Security pipelines..."></textarea>
-          </div>
+          <div id="pf-exp-cards"></div>
+          <button class="btn btn-ghost" id="pf-exp-add" style="margin-top:6px; font-size:12px; padding:6px;">+ Add experience</button>
 
           <h2 style="margin-top:16px;">Education <span class="muted" id="pf-edu-count"></span></h2>
           <div id="pf-edu-cards"></div>
