@@ -248,6 +248,23 @@ function renderCVs(cvs) {
 
 // ---------- EVENTS ----------
 function wireEvents() {
+  // Password eye toggle (delegated)
+  document.addEventListener("click", function (e) {
+    var btn = e.target;
+    if (!(btn instanceof HTMLElement)) return;
+    if (btn.dataset.toggle) {
+      var input = document.getElementById(btn.dataset.toggle);
+      if (!input) return;
+      if (input.type === "password") {
+        input.type = "text";
+        btn.innerHTML = "&#128064;";
+      } else {
+        input.type = "password";
+        btn.innerHTML = "&#128065;";
+      }
+    }
+  });
+
   // Login
   const loginForm = document.getElementById("login-form");
   if (loginForm) {
