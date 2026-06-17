@@ -20,6 +20,8 @@ const entries = [
 async function copyStatic() {
   await mkdir("dist/icons", { recursive: true });
   await cp("public/icons", "dist/icons", { recursive: true });
+  await cp("public/logo.png", "dist/logo.png");
+  await cp("public/favicon.ico", "dist/favicon.ico");
   await cp("popup.html", "dist/popup.html");
   await cp("popup.js", "dist/popup.js");
   await cp("manifest.json", "dist/manifest.json");

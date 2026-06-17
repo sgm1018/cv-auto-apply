@@ -610,8 +610,7 @@ function flashStatus(text, kind) {
 }
 
 // ---------- FILL SESSION ----------
-async function startFillSession(forms) {
-  const form = forms[0];
+async function startFillSession(form) {
   state.fillSession = {
     domain: form.domain,
     fields: form.fields,
