@@ -11,8 +11,8 @@ const state = {
 };
 
 // View management
-function showView(name: "login" | "main" | "fill" | "settings") {
-  for (const v of ["login", "main", "fill", "settings"] as const) {
+function showView(name: "login" | "register" | "main" | "fill" | "settings") {
+  for (const v of ["login", "register", "main", "fill", "settings"] as const) {
     document.getElementById(`view-${v}`)?.classList.toggle("active", v === name);
   }
 }
@@ -129,6 +129,52 @@ function wireEvents() {
       toast("Signed in", "ok");
     } else {
       toast(res?.error ?? "Login failed", "err");
+    }
+  });
+
+  // Login -> Register
+  document.getElementById("goto-signup")?.addEventListener("click", () => {
+    showView("register");
+  });
+
+  // Register -> Login
+  document.getElementById("goto-login")?.addEventListener("click", () => {
+    showView("login");
+  });
+
+  // Register form
+  document.getElementById("register-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = (document.getElementById("reg-email") as HTMLInputElement).value;
+    const password = (document.getElementById("reg-password") as HTMLInputElement).value;
+    const confirm = (document.getElementById("reg-confirm") as HTMLInputElement).value;
+    if (password !== confirm) {
+      toast("Passwords do not match", "err");
+      return;
+    }
+    const btn = (e.target as HTMLFormElement).querySelector("button[type=submit]") as HTMLButtonElement;
+    btn.disabled = true;
+    try {
+      const res = await fetch("http://localhost:8000/api/v1/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, language: "en", consent_terms: true }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        await chrome.storage.session.set({ accessToken: data.access_token, refreshToken: data.refresh_token });
+        state.authenticated = true;
+        state.email = email;
+        await loadSettings();
+        showView("main");
+        toast("Account created", "ok");
+      } else {
+        toast(data.detail ?? data.message ?? "Registration failed", "err");
+      }
+    } catch (err) {
+      toast("Cannot reach server: " + (err as Error).message, "err");
+    } finally {
+      btn.disabled = false;
     }
   });
 

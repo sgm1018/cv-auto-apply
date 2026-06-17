@@ -487,6 +487,43 @@
       </section>
 
       <!-- ===========================================================
+           REGISTER VIEW
+           =========================================================== -->
+      <section id="view-register" class="view">
+        <div class="hero-illu" aria-hidden="true">
+          <div class="ring r1"></div>
+          <div class="ring r2"></div>
+          <div class="ring r3"></div>
+          <div class="hero-icon">+</div>
+        </div>
+
+        <h1>Create your account</h1>
+        <p class="muted">Your CV data stays encrypted. We never share it with third parties.</p>
+
+        <form id="register-form">
+          <div class="field">
+            <label class="label" for="reg-email">Email</label>
+            <input class="input" id="reg-email" type="email" placeholder="you@workmail.com" autocomplete="email" required />
+          </div>
+          <div class="field">
+            <label class="label" for="reg-password">Password</label>
+            <input class="input" id="reg-password" type="password" placeholder="••••••••••••" autocomplete="new-password" required minlength="12" />
+          </div>
+          <div class="field">
+            <label class="label" for="reg-confirm">Confirm password</label>
+            <input class="input" id="reg-confirm" type="password" placeholder="••••••••••••" autocomplete="new-password" required minlength="12" />
+          </div>
+          <button class="btn btn-primary" type="submit">
+            Create account
+            <span aria-hidden="true">→</span>
+          </button>
+        </form>
+        <p class="muted mt-12" style="text-align:center;">
+          Already have one? <button class="link-btn" id="goto-login">Sign in</button>
+        </p>
+      </section>
+
+      <!-- ===========================================================
            MAIN VIEW (logged in)
            =========================================================== -->
       <section id="view-main" class="view">
