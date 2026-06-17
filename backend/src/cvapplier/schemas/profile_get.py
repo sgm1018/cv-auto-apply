@@ -45,6 +45,7 @@ class LanguageLevelDTO(BaseModel):
 
 class ProfileResponse(BaseModel):
     user_id: str
+    source_cv_id: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     email: Optional[EmailStr] = None

@@ -49,6 +49,7 @@ class LanguageLevel(BaseModel):
 
 class Profile(Document):
     user_id: Annotated[PydanticObjectId, Indexed(unique=True)]
+    source_cv_id: str | None = None
     first_name: str | None = None
     last_name: str | None = None
     email: EmailStr | None = None

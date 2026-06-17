@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends
 from cvapplier.core.deps import get_current_user
 from cvapplier.core.exceptions import NotFoundError
 from cvapplier.models.user import User
+from cvapplier.repositories.cv_repository import CVRepository
 from cvapplier.schemas.profile_get import ProfileResponse
 from cvapplier.schemas.profile_update import ProfileUpdateRequest
 from cvapplier.services.profile_service import ProfileService
@@ -35,6 +36,22 @@ async def put_profile(
     user: User = Depends(get_current_user),
 ) -> ProfileResponse:
     patch = body.model_dump(exclude_unset=True)
+    p = await ProfileService().update(str(user.id), patch)
+    return _to_dto(p)
+
+
+@router.put("/from-cv/{cv_id}", response_model=ProfileResponse)
+async def load_from_cv(
+    cv_id: str,
+    user: User = Depends(get_current_user),
+) -> ProfileResponse:
+    cv = await CVRepository().get_for_user(str(user.id), cv_id)
+    if cv is None:
+        raise NotFoundError("CV not found")
+    if not cv.parsed_data:
+        raise NotFoundError("CV has not been parsed yet")
+    patch = {k: v for k, v in cv.parsed_data.items() if v is not None}
+    patch["source_cv_id"] = cv_id
     p = await ProfileService().update(str(user.id), patch)
     return _to_dto(p)
 

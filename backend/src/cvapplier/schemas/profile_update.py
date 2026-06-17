@@ -12,6 +12,7 @@ from cvapplier.schemas.profile_get import (
 
 
 class ProfileUpdateRequest(BaseModel):
+    source_cv_id: Optional[str] = None
     first_name: Optional[str] = Field(default=None, max_length=100)
     last_name: Optional[str] = Field(default=None, max_length=100)
     email: Optional[EmailStr] = None

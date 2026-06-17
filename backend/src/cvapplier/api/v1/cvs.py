@@ -109,6 +109,10 @@ async def parse_cv(cv_id: str, user: User = Depends(get_current_user)) -> CVPars
         cv.parsed_data = parsed
         cv.parsed_at = utcnow()
         await cv.save()
+        # Auto-populate profile with parsed data
+        patch = {k: v for k, v in parsed.items() if v is not None}
+        patch["source_cv_id"] = str(cv.id)
+        await ProfileService().update(str(user.id), patch)
         return CVParseResponse(
             cv_id=str(cv.id),
             parse_status="done",
@@ -157,6 +161,10 @@ async def _auto_parse_cv(cv: CV, user: User) -> None:
         cv.parsed_data = parsed
         cv.parsed_at = utcnow()
         await cv.save()
+        # Auto-populate profile with parsed data
+        patch = {k: v for k, v in parsed.items() if v is not None}
+        patch["source_cv_id"] = str(cv.id)
+        await ProfileService().update(str(user.id), patch)
         log.info("cv_parsed", cv_id=str(cv.id), fields=len(parsed))
     except Exception as e:
         cv.parse_status = "failed"

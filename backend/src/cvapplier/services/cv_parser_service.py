@@ -74,16 +74,27 @@ SYSTEM_PROMPT = textwrap.dedent("""\
 
     EXTRACTION RULES:
     1. Be EXHAUSTIVE — if data exists in the CV, it MUST appear in the output.
-    2. Do NOT hallucinate. Only include information actually present in the text.
-    3. If you see a section header like "Experience", "Formacion", "Skills", "Idiomas",
+    2. ANTI-HALLUCINATION — NEVER invent, guess, or fabricate data:
+       - If there is NO email in the text, email MUST be null — do NOT construct one from the name.
+       - If there is NO phone, phone MUST be null — do NOT insert a placeholder.
+       - If there is NO LinkedIn/GitHub/portfolio URL in the text, those fields MUST be null.
+         Do NOT guess URLs from the person's name or company.
+       - If there is NO explicit summary, summary MUST be null — do NOT synthesize one.
+       - If there is NO education section, education MUST be [] — do NOT invent degrees.
+       - If there is NO certifications section, certifications MUST be [].
+       - If there is NO languages section, languages MUST be [].
+       - Only include skills that are EXPLICITLY listed in the CV text.
+       - If a work experience entry has no description, use null — do NOT write one.
+    3. NULL vs EMPTY: use null when data is absent, [] when the list is genuinely empty.
+    4. If you see a section header like "Experience", "Formacion", "Skills", "Idiomas",
        "Certifications", "Education", "Work History" — extract ALL entries under it.
-    4. For URLs: look for http/https links AND plain-text mentions of "linkedin.com/in/...",
-       "github.com/...", portfolio domains.
-    5. For dates: normalize all formats (MM/YYYY, Month YYYY, "2020 - 2023", "2019- actualidad")
+    5. For URLs: ONLY extract URLs that appear literally in the text (http/https or
+       explicit domain mentions like "linkedin.com/in/username" or "github.com/username").
+    6. For dates: normalize all formats (MM/YYYY, Month YYYY, "2020 - 2023", "2019- actualidad")
        to YYYY-MM-DD. Use 01 for unknown day or month.
-    6. Remove markdown, HTML tags, and excessive whitespace from descriptions.
-    7. Deduplicate skills: "JavaScript" and "JS" → "JavaScript". "AWS" and "Amazon Web Services" → "AWS".
-    8. If the CV is in Spanish or another language, still extract field names in English
+    7. Remove markdown, HTML tags, and excessive whitespace from descriptions.
+    8. Deduplicate skills: "JavaScript" and "JS" → "JavaScript". "AWS" and "Amazon Web Services" → "AWS".
+    9. If the CV is in Spanish or another language, still extract field names in English
        but preserve the original content of descriptions, titles, and company names.
 
     Respond with STRICT JSON only. No markdown, no code fences, no comments.

@@ -222,9 +222,8 @@ function renderCVs(cvs) {
       if (d.education && d.education.length) fields.push("Edu: " + d.education.length);
       previewHtml =
         '<div style="margin-top:8px; padding:8px; background:var(--ink-100); border-radius:8px; font-size:11px; color:var(--ink-700);">' +
-          '<div style="font-weight:600; margin-bottom:4px;">Parsed data:</div>' +
+          '<div style="font-weight:600; margin-bottom:4px;">\u2713 Profile updated from this CV</div>' +
           fields.map(function (f) { return '<div style="margin:2px 0;">\u2022 ' + escapeHtml(f) + '</div>'; }).join("") +
-          '<button class="btn btn-primary" data-action="confirm" data-id="' + cv.cv_id + '" style="margin-top:8px; font-size:12px; padding:6px 10px;">Confirm & save to profile</button>' +
         '</div>';
     }
     return (
@@ -409,6 +408,18 @@ function wireEvents() {
   const pfSave = document.getElementById("pf-save");
   if (pfSave) pfSave.addEventListener("click", async function () { await saveProfile(); });
 
+  // CV source selector in profile tab
+  const pfSourceCv = document.getElementById("pf-source-cv");
+  if (pfSourceCv) {
+    pfSourceCv.addEventListener("change", async function () {
+      var cvId = pfSourceCv.value;
+      if (!cvId) return;
+      var token = await getToken();
+      if (!token) return;
+      await switchProfileCV(cvId, token);
+    });
+  }
+
   // Test connection
   const setTest = document.getElementById("set-test");
   if (setTest) {
@@ -543,22 +554,6 @@ function wireEvents() {
           target.disabled = false;
           target.textContent = "Parse";
           await loadCVs();
-        } else if (action === "confirm") {
-          if (!confirm("Save parsed data to your profile?")) return;
-          target.disabled = true;
-          target.textContent = "Saving\u2026";
-          const res = await fetch("http://localhost:8000/api/v1/cvs/" + cvId + "/confirm", {
-            method: "POST",
-            headers: { Authorization: "Bearer " + token },
-          });
-          if (res.ok) {
-            toast("Profile updated from CV", "ok");
-            await loadCVs();
-          } else {
-            target.disabled = false;
-            target.textContent = "Confirm & save to profile";
-            toast("Confirm failed", "err");
-          }
         }
       } catch (err) {
         toast("Error: " + err.message, "err");
@@ -683,13 +678,43 @@ async function loadProfile() {
   const token = await getToken();
   if (!token) return;
   try {
-    const res = await fetch("http://localhost:8000/api/v1/profile", {
-      headers: { Authorization: "Bearer " + token },
-    });
-    if (!res.ok) return;
-    const p = await res.json();
-    const setField = function (id, val) {
-      const el = document.getElementById(id);
+    // Load profile + CV list in parallel
+    const [profRes, cvsRes] = await Promise.all([
+      fetch("http://localhost:8000/api/v1/profile", {
+        headers: { Authorization: "Bearer " + token },
+      }),
+      fetch("http://localhost:8000/api/v1/cvs", {
+        headers: { Authorization: "Bearer " + token },
+      }),
+    ]);
+    var p = {};
+    if (profRes.ok) p = await profRes.json();
+    var cvs = [];
+    if (cvsRes.ok) cvs = await cvsRes.json();
+
+    // Populate CV selector dropdown with parsed CVs
+    var sourceSel = document.getElementById("pf-source-cv");
+    var sourceLabel = document.getElementById("pf-source-label");
+    if (sourceSel) {
+      var parsedCVs = cvs.filter(function (c) { return c.parse_status === "done" && c.parsed_data; });
+      sourceSel.innerHTML = '<option value="">-- No CV --</option>' +
+        parsedCVs.map(function (c) {
+          var sel = (p.source_cv_id && c.cv_id === p.source_cv_id) ? " selected" : "";
+          return '<option value="' + c.cv_id + '"' + sel + '>' + escapeHtml(c.filename) + '</option>';
+        }).join("");
+      if (sourceLabel) {
+        if (p.source_cv_id) {
+          var srcCv = cvs.find(function (c) { return c.cv_id === p.source_cv_id; });
+          sourceLabel.textContent = srcCv ? "Loaded from: " + srcCv.filename : "";
+        } else {
+          sourceLabel.textContent = "No CV selected \u2014 fill manually or parse a CV";
+        }
+      }
+    }
+
+    // Populate form fields
+    var setField = function (id, val) {
+      var el = document.getElementById(id);
       if (el) el.value = val || "";
     };
     setField("pf-first-name", p.first_name);
@@ -702,20 +727,41 @@ async function loadProfile() {
     setField("pf-summary", p.summary);
     if (p.skills && p.skills.length > 0) {
       setField("pf-skills", p.skills.join(", "));
+    } else {
+      setField("pf-skills", "");
     }
   } catch (_e) { /* silent */ }
 }
 
+async function switchProfileCV(cvId, token) {
+  try {
+    var res = await fetch("http://localhost:8000/api/v1/profile/from-cv/" + cvId, {
+      method: "PUT",
+      headers: { Authorization: "Bearer " + token },
+    });
+    if (res.ok) {
+      toast("Profile loaded from CV", "ok");
+      await loadProfile();
+    } else {
+      var data = await res.json().catch(function () { return {}; });
+      toast(data.detail || "Failed to load CV data", "err");
+    }
+  } catch (_e) {
+    toast("Cannot reach server", "err");
+  }
+}
+
 async function saveProfile() {
-  const token = await getToken();
+  var token = await getToken();
   if (!token) { toast("Please sign in first", "err"); return; }
-  const getStr = function (id) {
-    const el = document.getElementById(id);
+  var getStr = function (id) {
+    var el = document.getElementById(id);
     return el ? el.value.trim() : "";
   };
-  const skillsStr = getStr("pf-skills");
-  const skills = skillsStr ? skillsStr.split(",").map(function (s) { return s.trim(); }).filter(Boolean) : [];
-  const body = {
+  var skillsStr = getStr("pf-skills");
+  var skills = skillsStr ? skillsStr.split(",").map(function (s) { return s.trim(); }).filter(Boolean) : [];
+  var sourceSel = document.getElementById("pf-source-cv");
+  var body = {
     first_name: getStr("pf-first-name") || null,
     last_name: getStr("pf-last-name") || null,
     email: getStr("pf-email") || null,
@@ -725,10 +771,11 @@ async function saveProfile() {
     portfolio_url: getStr("pf-portfolio") || null,
     summary: getStr("pf-summary") || null,
     skills: skills,
+    source_cv_id: sourceSel ? sourceSel.value || null : null,
   };
-  const statusEl = document.getElementById("pf-status");
+  var statusEl = document.getElementById("pf-status");
   try {
-    const res = await fetch("http://localhost:8000/api/v1/profile", {
+    var res = await fetch("http://localhost:8000/api/v1/profile", {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
       body: JSON.stringify(body),
@@ -736,7 +783,7 @@ async function saveProfile() {
     if (res.ok) {
       if (statusEl) { statusEl.textContent = "\u2713 Profile saved"; statusEl.style.color = "#047857"; }
     } else {
-      const data = await res.json().catch(function () { return {}; });
+      var data = await res.json().catch(function () { return {}; });
       if (statusEl) { statusEl.textContent = "\u2717 " + (data.message || "Save failed"); statusEl.style.color = "#b91c1c"; }
     }
   } catch (_e) {
