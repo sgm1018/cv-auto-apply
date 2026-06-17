@@ -535,6 +535,15 @@
         <h1>Hi, <span id="user-email">there</span> 👋</h1>
         <p>CVApplier is watching this page. When it spots a job application form, it will offer to fill it for you.</p>
 
+        <div id="form-detected-card" class="card hidden" style="border: 1.5px solid var(--blue-300); background: var(--blue-50);">
+          <h2 style="margin-top:0; color: var(--blue-800);">📋 Form detected</h2>
+          <p class="muted" style="margin-bottom:10px;">A job application form is ready on this page.</p>
+          <button class="btn btn-primary" id="trigger-fill-btn" style="margin-top:4px;">
+            Review and apply
+            <span aria-hidden="true">→</span>
+          </button>
+        </div>
+
         <div class="card">
           <h2 style="margin-top:0;">What CVApplier can do here</h2>
           <p class="muted" style="margin-bottom:10px;">It detects the form, previews each field, and only fills after you confirm. Source of every value is shown.</p>
@@ -546,8 +555,9 @@
         </div>
 
         <div class="card">
-          <h2 style="margin-top:0;">No form on this page?</h2>
-          <p class="muted">Open a real job application (Greenhouse, Workday, Lever, any portal) and CVApplier will wake up automatically.</p>
+          <h2 style="margin-top:0;">No form detected?</h2>
+          <p class="muted" style="margin-bottom:10px;">Click below to manually scan the page.</p>
+          <button class="btn btn-ghost" id="scan-form-btn">Scan this page</button>
         </div>
       </section>
 

@@ -62,17 +62,41 @@ async function boot() {
 }
 
 async function maybeTriggerFillFromContent() {
+  // Check if the banner button was clicked (TRIGGER_FILL)
+  let pending = false;
+  try {
+    const res = await send({ type: "PENDING_FILL_CHECK" });
+    pending = !!(res && res.pending);
+  } catch (_e) { /* ignore */ }
+  const forms = await scanCurrentTabForForms();
+  if (forms && forms.length > 0) {
+    showFormDetectedCard(true);
+    if (pending) {
+      startFillSession(forms[0]);
+    }
+  } else {
+    showFormDetectedCard(false);
+  }
+}
+
+async function scanCurrentTabForForms() {
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
   const tab = tabs[0];
-  if (!tab || !tab.id) return;
+  if (!tab || !tab.id) return [];
   try {
     const result = await chrome.tabs.sendMessage(tab.id, { type: "GET_FORMS" });
     if (result && result.forms && result.forms.length > 0) {
-      startFillSession(result.forms[0]);
+      return result.forms;
     }
   } catch (_e) {
-    // No content script on this tab; stay on main view
+    // No content script on this tab
   }
+  return [];
+}
+
+function showFormDetectedCard(visible) {
+  const card = document.getElementById("form-detected-card");
+  if (card) card.classList.toggle("hidden", !visible);
 }
 
 async function loadSettings() {
@@ -268,6 +292,38 @@ function wireEvents() {
     gotoSettings.addEventListener("click", function () {
       showView("settings");
       activateTab("general");
+    });
+  }
+
+  // Main: trigger fill (from form-detected card)
+  const triggerFillBtn = document.getElementById("trigger-fill-btn");
+  if (triggerFillBtn) {
+    triggerFillBtn.addEventListener("click", async function () {
+      const forms = await scanCurrentTabForForms();
+      if (!forms || forms.length === 0) {
+        toast("No form detected now", "err");
+        return;
+      }
+      startFillSession(forms[0]);
+    });
+  }
+
+  // Main: manual scan
+  const scanFormBtn = document.getElementById("scan-form-btn");
+  if (scanFormBtn) {
+    scanFormBtn.addEventListener("click", async function () {
+      scanFormBtn.disabled = true;
+      scanFormBtn.textContent = "Scanning...";
+      const forms = await scanCurrentTabForForms();
+      scanFormBtn.disabled = false;
+      scanFormBtn.textContent = "Scan this page";
+      if (forms && forms.length > 0) {
+        showFormDetectedCard(true);
+        toast("Form found \u2014 click Review and apply", "ok");
+      } else {
+        showFormDetectedCard(false);
+        toast("No form detected on this page", "err");
+      }
     });
   }
 

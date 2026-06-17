@@ -66,4 +66,6 @@ export type Message =
   | { type: "AUTH_LOGOUT" }
   | { type: "AUTH_STATE" }
   | { type: "SETTINGS_UPDATE"; patch: Partial<Settings> }
-  | { type: "PROFILE_UPDATED" };
+  | { type: "PROFILE_UPDATED" }
+  | { type: "TRIGGER_FILL" }
+  | { type: "PENDING_FILL_CHECK" };

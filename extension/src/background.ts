@@ -129,6 +129,28 @@ chrome.runtime.onMessage.addListener((msg: Message, _sender, sendResponse) => {
           sendResponse({ ok: true });
           break;
         }
+        case "TRIGGER_FILL": {
+          // Banner button was clicked. Try to open the popup and signal it to trigger fill.
+          try {
+            await chrome.action.openPopup();
+          } catch {
+            // openPopup may not be available; fallback: store a flag the popup reads on boot
+            await chrome.storage.session.set({ pendingFill: true });
+            try { await chrome.action.openPopup(); } catch { /* ignore */ }
+          }
+          sendResponse({ ok: true });
+          break;
+        }
+        case "PENDING_FILL_CHECK": {
+          const stored = await chrome.storage.session.get("pendingFill");
+          if (stored.pendingFill) {
+            await chrome.storage.session.remove("pendingFill");
+            sendResponse({ pending: true });
+          } else {
+            sendResponse({ pending: false });
+          }
+          break;
+        }
         default:
           sendResponse({ ok: false, error: "unknown message" });
       }

@@ -143,7 +143,7 @@ function showBanner(form: HTMLFormElement) {
   `;
   document.documentElement.appendChild(host);
   shadow.querySelector("#apply")?.addEventListener("click", () => {
-    void openPopup();
+    void triggerFill();
     hideBanner();
   });
   shadow.querySelector("#skip")?.addEventListener("click", hideBanner);
@@ -153,11 +153,12 @@ function hideBanner() {
   document.getElementById(BANNER_ID)?.remove();
 }
 
-async function openPopup() {
+async function triggerFill() {
   try {
-    await chrome.action.openPopup();
+    await chrome.runtime.sendMessage({ type: "TRIGGER_FILL" });
   } catch {
-    // openPopup not always available; user can click the icon manually
+    // Fallback: try direct openPopup
+    try { await chrome.action.openPopup(); } catch { /* ignore */ }
   }
 }
 
