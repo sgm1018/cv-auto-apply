@@ -743,52 +743,41 @@ async function loadProfile() {
     } else {
       setField("pf-languages", "");
     }
-    // Work experience cards
-    var expList = document.getElementById("pf-exp-list");
+    // Work experience textarea
     var expCount = document.getElementById("pf-exp-count");
-    if (expList && p.work_experience && p.work_experience.length > 0) {
+    var expTextarea = document.getElementById("pf-exp-textarea");
+    if (expTextarea && p.work_experience && p.work_experience.length > 0) {
       if (expCount) expCount.textContent = "(" + p.work_experience.length + ")";
-      expList.innerHTML = p.work_experience.map(function (e) {
-        var period = e.start_date ? (e.start_date + " \u2013 " + (e.current ? "present" : (e.end_date || ""))) : "";
-        return '<div style="padding:6px 0; border-bottom:1px solid var(--ink-100);">' +
-          '<div style="font-weight:600; font-size:12px;">' + escapeHtml(e.title) + '</div>' +
-          '<div class="muted" style="font-size:11px;">' + escapeHtml(e.company) + (e.location ? " \u00b7 " + escapeHtml(e.location) : "") + '</div>' +
-          (period ? '<div class="muted" style="font-size:10px;">' + period + '</div>' : "") +
-        '</div>';
-      }).join("");
-    } else if (expList) {
+      expTextarea.value = p.work_experience.map(function (e) {
+        return [e.company || "", e.title || "", e.start_date || "", e.end_date || "", String(e.current || false), e.location || "", e.description || ""].join(" | ");
+      }).join("\n");
+    } else if (expTextarea) {
       if (expCount) expCount.textContent = "";
-      expList.innerHTML = '<p class="muted" style="text-align:center;">No work experience</p>';
+      expTextarea.value = "";
     }
-    // Education cards
-    var eduList = document.getElementById("pf-edu-list");
+    // Education textarea
     var eduCount = document.getElementById("pf-edu-count");
-    if (eduList && p.education && p.education.length > 0) {
+    var eduTextarea = document.getElementById("pf-edu-textarea");
+    if (eduTextarea && p.education && p.education.length > 0) {
       if (eduCount) eduCount.textContent = "(" + p.education.length + ")";
-      eduList.innerHTML = p.education.map(function (e) {
-        return '<div style="padding:6px 0; border-bottom:1px solid var(--ink-100);">' +
-          '<div style="font-weight:600; font-size:12px;">' + escapeHtml(e.institution) + '</div>' +
-          '<div class="muted" style="font-size:11px;">' + escapeHtml(e.degree || "") + (e.field ? " in " + escapeHtml(e.field) : "") + '</div>' +
-        '</div>';
-      }).join("");
-    } else if (eduList) {
+      eduTextarea.value = p.education.map(function (e) {
+        return [e.institution || "", e.degree || "", e.field || "", e.start_date || "", e.end_date || ""].join(" | ");
+      }).join("\n");
+    } else if (eduTextarea) {
       if (eduCount) eduCount.textContent = "";
-      eduList.innerHTML = '<p class="muted" style="text-align:center;">No education</p>';
+      eduTextarea.value = "";
     }
-    // Certifications cards
-    var certList = document.getElementById("pf-cert-list");
+    // Certifications textarea
     var certCount = document.getElementById("pf-cert-count");
-    if (certList && p.certifications && p.certifications.length > 0) {
+    var certTextarea = document.getElementById("pf-cert-textarea");
+    if (certTextarea && p.certifications && p.certifications.length > 0) {
       if (certCount) certCount.textContent = "(" + p.certifications.length + ")";
-      certList.innerHTML = p.certifications.map(function (c) {
-        return '<div style="padding:6px 0; border-bottom:1px solid var(--ink-100);">' +
-          '<div style="font-weight:600; font-size:12px;">' + escapeHtml(c.name) + '</div>' +
-          '<div class="muted" style="font-size:11px;">' + escapeHtml(c.issuer || "") + (c.issue_date ? " \u00b7 " + c.issue_date : "") + '</div>' +
-        '</div>';
-      }).join("");
-    } else if (certList) {
+      certTextarea.value = p.certifications.map(function (c) {
+        return [c.name || "", c.issuer || "", c.issue_date || ""].join(" | ");
+      }).join("\n");
+    } else if (certTextarea) {
       if (certCount) certCount.textContent = "";
-      certList.innerHTML = '<p class="muted" style="text-align:center;">No certifications</p>';
+      certTextarea.value = "";
     }
   } catch (_e) { /* silent */ }
 }
@@ -826,6 +815,49 @@ async function saveProfile() {
     return { name: (parts[0] || "").trim(), level: (parts[1] || "native").trim() };
   }) : [];
   var sourceSel = document.getElementById("pf-source-cv");
+
+  // Parse work experience textarea
+  var expText = getStr("pf-exp-textarea");
+  var workExperience = expText ? expText.split("\n").map(function (line) {
+    var parts = line.split("|").map(function (s) { return s.trim(); });
+    if (!parts[0] && !parts[1]) return null;
+    return {
+      company: parts[0] || "",
+      title: parts[1] || "",
+      start_date: parts[2] || null,
+      end_date: parts[3] || null,
+      current: parts[4] === "true",
+      location: parts[5] || null,
+      description: parts[6] || null,
+    };
+  }).filter(Boolean) : [];
+
+  // Parse education textarea
+  var eduText = getStr("pf-edu-textarea");
+  var education = eduText ? eduText.split("\n").map(function (line) {
+    var parts = line.split("|").map(function (s) { return s.trim(); });
+    if (!parts[0]) return null;
+    return {
+      institution: parts[0] || "",
+      degree: parts[1] || null,
+      field: parts[2] || null,
+      start_date: parts[3] || null,
+      end_date: parts[4] || null,
+    };
+  }).filter(Boolean) : [];
+
+  // Parse certifications textarea
+  var certText = getStr("pf-cert-textarea");
+  var certifications = certText ? certText.split("\n").map(function (line) {
+    var parts = line.split("|").map(function (s) { return s.trim(); });
+    if (!parts[0]) return null;
+    return {
+      name: parts[0] || "",
+      issuer: parts[1] || null,
+      issue_date: parts[2] || null,
+    };
+  }).filter(Boolean) : [];
+
   var body = {
     first_name: getStr("pf-first-name") || null,
     last_name: getStr("pf-last-name") || null,
@@ -843,6 +875,9 @@ async function saveProfile() {
       country: getStr("pf-country") || null,
       country_code: getStr("pf-country-code") || null,
     },
+    work_experience: workExperience,
+    education: education,
+    certifications: certifications,
     source_cv_id: sourceSel ? sourceSel.value || null : null,
   };
   var statusEl = document.getElementById("pf-status");

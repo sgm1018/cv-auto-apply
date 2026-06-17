@@ -50,13 +50,29 @@
 
     body {
       width: 380px;
-      min-height: 520px;
+      min-height: 100dvh;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       color: var(--ink-900);
       background: var(--white);
-      overflow: hidden;
+      overflow-y: auto;
+      overflow-x: hidden;
       font-size: 14px;
       -webkit-font-smoothing: antialiased;
+    }
+
+    /* custom scrollbar */
+    body::-webkit-scrollbar {
+      width: 6px;
+    }
+    body::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    body::-webkit-scrollbar-thumb {
+      background: var(--blue-200);
+      border-radius: 3px;
+    }
+    body::-webkit-scrollbar-thumb:hover {
+      background: var(--blue-400);
     }
 
     /* ------------------------------------------------------------------
@@ -680,18 +696,21 @@
           </div>
 
           <h2 style="margin-top:16px;">Work experience <span class="muted" id="pf-exp-count"></span></h2>
-          <div class="card" id="pf-exp-list" style="padding:8px 10px; max-height:150px; overflow-y:auto;">
-            <p class="muted" style="text-align:center;">Loading...</p>
+          <div class="field">
+            <label class="label" for="pf-exp-textarea">One per line: <span class="muted">Company | Title | Start (YYYY-MM-DD) | End (YYYY-MM-DD or blank) | Current (true/false) | Location | Description</span></label>
+            <textarea class="input" id="pf-exp-textarea" rows="6" style="resize:vertical; min-height:80px; font-size:11px; font-family:monospace; line-height:1.5;" placeholder="TCH Labs | Head of Dev | 2024-01 | | true | Spain | Leading dev team...&#10;CSA | DevOps | 2023-01 | 2024-01 | false | Spain | Security pipelines..."></textarea>
           </div>
 
           <h2 style="margin-top:16px;">Education <span class="muted" id="pf-edu-count"></span></h2>
-          <div class="card" id="pf-edu-list" style="padding:8px 10px; max-height:120px; overflow-y:auto;">
-            <p class="muted" style="text-align:center;">Loading...</p>
+          <div class="field">
+            <label class="label" for="pf-edu-textarea">One per line: <span class="muted">Institution | Degree | Field | Start | End</span></label>
+            <textarea class="input" id="pf-edu-textarea" rows="4" style="resize:vertical; min-height:60px; font-size:11px; font-family:monospace; line-height:1.5;" placeholder="MIT | BSc | Computer Science | 2018 | 2022&#10;Stanford | MSc | AI | 2022 | 2024"></textarea>
           </div>
 
           <h2 style="margin-top:16px;">Certifications <span class="muted" id="pf-cert-count"></span></h2>
-          <div class="card" id="pf-cert-list" style="padding:8px 10px; max-height:120px; overflow-y:auto;">
-            <p class="muted" style="text-align:center;">Loading...</p>
+          <div class="field">
+            <label class="label" for="pf-cert-textarea">One per line: <span class="muted">Name | Issuer | Date</span></label>
+            <textarea class="input" id="pf-cert-textarea" rows="4" style="resize:vertical; min-height:60px; font-size:11px; font-family:monospace; line-height:1.5;" placeholder="AWS Solutions Architect | Amazon | 2024-06&#10;CKAD | CNCF | 2023-12"></textarea>
           </div>
 
           <h2 style="margin-top:16px;">Languages</h2>
