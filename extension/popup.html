@@ -592,6 +592,7 @@
         <div class="tabs">
           <div class="tab active" data-tab="general">General</div>
           <div class="tab" data-tab="llm">LLM</div>
+          <div class="tab" data-tab="cvs">CVs</div>
           <div class="tab" data-tab="account">Account</div>
         </div>
 
@@ -648,6 +649,23 @@
             <button class="btn btn-primary" id="set-save-llm">Save</button>
           </div>
           <p class="muted mt-12" id="set-test-result" style="min-height:14px;"></p>
+        </div>
+
+        <div id="tab-cvs" class="tab-panel hidden">
+          <div class="field">
+            <label class="label" for="cv-file-input">Upload new CV</label>
+            <input class="input" id="cv-file-input" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+          </div>
+          <button class="btn btn-primary" id="cv-upload-btn">
+            Upload
+            <span aria-hidden="true">↑</span>
+          </button>
+          <p class="muted mt-12" id="cv-upload-status" style="min-height:14px;"></p>
+
+          <h2 style="margin-top:18px;">Your CVs</h2>
+          <div id="cv-list" style="max-height: 200px; overflow-y: auto;">
+            <p class="muted" style="padding: 12px 0; text-align: center;">Loading…</p>
+          </div>
         </div>
 
         <div id="tab-account" class="tab-panel hidden">

@@ -20,9 +20,12 @@ function activateTab(name) {
   for (const t of document.querySelectorAll(".tab")) {
     t.classList.toggle("active", t.dataset.tab === name);
   }
-  for (const p of ["general", "llm", "account"]) {
+  for (const p of ["general", "llm", "cvs", "account"]) {
     const el = document.getElementById("tab-" + p);
     if (el) el.classList.toggle("hidden", p !== name);
+  }
+  if (name === "cvs") {
+    loadCVs();
   }
 }
 
@@ -118,6 +121,65 @@ function applySettingsToUI() {
 async function getToken() {
   const stored = await chrome.storage.session.get("accessToken");
   return stored.accessToken || "";
+}
+
+// ---------- CVs ----------
+async function loadCVs() {
+  const list = document.getElementById("cv-list");
+  if (!list) return;
+  list.innerHTML = '<p class="muted" style="padding: 12px 0; text-align: center;">Loading\u2026</p>';
+  try {
+    const token = await getToken();
+    const res = await fetch("http://localhost:8000/api/v1/cvs", {
+      headers: { Authorization: "Bearer " + token },
+    });
+    if (!res.ok) {
+      list.innerHTML = '<p class="muted" style="padding: 12px 0; text-align: center; color:#b91c1c;">Failed to load CVs</p>';
+      return;
+    }
+    const cvs = await res.json();
+    renderCVs(cvs);
+  } catch (_e) {
+    list.innerHTML = '<p class="muted" style="padding: 12px 0; text-align: center; color:#b91c1c;">Cannot reach server</p>';
+  }
+}
+
+function renderCVs(cvs) {
+  const list = document.getElementById("cv-list");
+  if (!list) return;
+  if (!cvs || cvs.length === 0) {
+    list.innerHTML = '<p class="muted" style="padding: 12px 0; text-align: center;">No CVs yet. Upload your first one above.</p>';
+    return;
+  }
+  list.innerHTML = cvs.map(function (cv) {
+    const sizeKb = Math.round(cv.size_bytes / 1024);
+    const primaryBadge = cv.is_primary
+      ? '<span class="badge learned">primary</span>'
+      : "";
+    const statusBadge = cv.parse_status === "done"
+      ? '<span class="badge local">parsed</span>'
+      : cv.parse_status === "failed"
+        ? '<span class="badge err">parse error</span>'
+        : '<span class="badge skip">pending</span>';
+    const primaryBtn = cv.is_primary
+      ? ""
+      : '<button class="link-btn" data-action="primary" data-id="' + cv.cv_id + '" style="font-size:12px;">Set primary</button>';
+    return (
+      '<div class="card" style="padding:10px 12px; margin-bottom:8px;">' +
+        '<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">' +
+          '<div style="flex:1; min-width:0;">' +
+            '<div style="font-weight:600; font-size:13px; word-break:break-all;">' + escapeHtml(cv.filename) + '</div>' +
+            '<div class="muted" style="font-size:11px; margin-top:2px;">' + sizeKb + ' KB \u00b7 ' + escapeHtml(cv.mime_type) + '</div>' +
+            '<div style="margin-top:6px; display:flex; gap:4px; flex-wrap:wrap;">' + primaryBadge + statusBadge + '</div>' +
+          '</div>' +
+          '<div style="display:flex; flex-direction:column; gap:4px; align-items:flex-end;">' +
+            primaryBtn +
+            '<button class="link-btn" data-action="delete" data-id="' + cv.cv_id + '" style="font-size:12px; color:#b91c1c;">Delete</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    );
+  }).join("");
 }
 
 // ---------- EVENTS ----------
@@ -273,6 +335,97 @@ function wireEvents() {
       } catch (_e) {
         out.textContent = "\u2717 Cannot reach server";
         out.style.color = "#b91c1c";
+      }
+    });
+  }
+
+  // CV upload
+  const cvUploadBtn = document.getElementById("cv-upload-btn");
+  if (cvUploadBtn) {
+    cvUploadBtn.addEventListener("click", async function () {
+      const fileInput = document.getElementById("cv-file-input");
+      const status = document.getElementById("cv-upload-status");
+      if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        status.textContent = "Pick a file first";
+        status.style.color = "#b91c1c";
+        return;
+      }
+      const file = fileInput.files[0];
+      const btn = cvUploadBtn;
+      btn.disabled = true;
+      status.textContent = "Uploading...";
+      status.style.color = "";
+      try {
+        const token = await getToken();
+        const form = new FormData();
+        form.append("file", file);
+        const res = await fetch("http://localhost:8000/api/v1/cvs", {
+          method: "POST",
+          headers: { Authorization: "Bearer " + token },
+          body: form,
+        });
+        if (res.ok) {
+          const data = await res.json();
+          status.textContent = "\u2713 " + file.name + " uploaded";
+          status.style.color = "#047857";
+          fileInput.value = "";
+          await loadCVs();
+        } else {
+          const body = await res.json().catch(function () { return {}; });
+          status.textContent = "\u2717 " + (body.detail || "Upload failed");
+          status.style.color = "#b91c1c";
+        }
+      } catch (e) {
+        status.textContent = "\u2717 " + e.message;
+        status.style.color = "#b91c1c";
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+
+  // CV list delegated handlers (primary/delete)
+  const cvList = document.getElementById("cv-list");
+  if (cvList) {
+    cvList.addEventListener("click", async function (e) {
+      const target = e.target;
+      if (!(target instanceof HTMLElement)) return;
+      const action = target.dataset.action;
+      const cvId = target.dataset.id;
+      if (!action || !cvId) return;
+      const token = await getToken();
+      try {
+        if (action === "primary") {
+          target.disabled = true;
+          const res = await fetch("http://localhost:8000/api/v1/cvs/" + cvId + "/primary", {
+            method: "PATCH",
+            headers: { Authorization: "Bearer " + token },
+          });
+          if (res.ok) {
+            toast("Primary CV updated", "ok");
+            await loadCVs();
+          } else {
+            target.disabled = false;
+            toast("Failed to set primary", "err");
+          }
+        } else if (action === "delete") {
+          if (!confirm("Delete this CV?")) return;
+          target.disabled = true;
+          const res = await fetch("http://localhost:8000/api/v1/cvs/" + cvId, {
+            method: "DELETE",
+            headers: { Authorization: "Bearer " + token },
+          });
+          if (res.ok) {
+            toast("CV deleted", "ok");
+            await loadCVs();
+          } else {
+            target.disabled = false;
+            toast("Delete failed", "err");
+          }
+        }
+      } catch (err) {
+        toast("Error: " + err.message, "err");
+        target.disabled = false;
       }
     });
   }
