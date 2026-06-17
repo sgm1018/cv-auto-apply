@@ -1,52 +1,52 @@
-/// <reference types="chrome" />
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 // Popup state
 const state = {
   authenticated: false,
-  email: null as string | null,
-  settings: null as any,
-  fillSession: null as any,
-  fields: [] as any[],
+  email: null,
+  settings: null,
+  fillSession: null,
+  fields: [],
 };
 
 // View management
-function showView(name: "login" | "register" | "main" | "fill" | "settings") {
-  for (const v of ["login", "register", "main", "fill", "settings"] as const) {
-    document.getElementById(`view-${v}`)?.classList.toggle("active", v === name);
+function showView(name) {
+  for (const v of ["login", "register", "main", "fill", "settings"]) {
+    const el = document.getElementById("view-" + v);
+    if (el) el.classList.toggle("active", v === name);
   }
 }
 
 // Tab management
-function activateTab(name: "general" | "llm" | "account") {
-  for (const t of document.querySelectorAll<HTMLElement>(".tab")) {
+function activateTab(name) {
+  for (const t of document.querySelectorAll(".tab")) {
     t.classList.toggle("active", t.dataset.tab === name);
   }
-  for (const p of ["general", "llm", "account"] as const) {
-    document.getElementById(`tab-${p}`)?.classList.toggle("hidden", p !== name);
+  for (const p of ["general", "llm", "account"]) {
+    const el = document.getElementById("tab-" + p);
+    if (el) el.classList.toggle("hidden", p !== name);
   }
 }
 
 // Toast
-function toast(message: string, kind: "ok" | "err" | "" = "") {
+function toast(message, kind) {
+  kind = kind || "";
   const el = document.createElement("div");
-  el.className = "toast" + (kind ? ` ${kind}` : "");
+  el.className = "toast" + (kind ? " " + kind : "");
   el.textContent = message;
   document.body.appendChild(el);
-  setTimeout(() => el.remove(), 3500);
+  setTimeout(function () { el.remove(); }, 3500);
 }
 
 // Send to background
-function send<T = any>(msg: any): Promise<T> {
-  return new Promise((resolve) => {
-    chrome.runtime.sendMessage(msg, (response) => resolve(response as T));
+function send(msg) {
+  return new Promise(function (resolve) {
+    chrome.runtime.sendMessage(msg, function (response) { resolve(response); });
   });
 }
 
 // ---------- BOOTSTRAP ----------
 async function boot() {
   const auth = await send({ type: "AUTH_STATE" });
-  if (auth?.authenticated) {
+  if (auth && auth.authenticated) {
     state.authenticated = true;
     state.email = auth.email;
     await loadSettings();
@@ -59,25 +59,26 @@ async function boot() {
 }
 
 async function maybeTriggerFillFromContent() {
-  // Get the active tab and ask the content script for forms
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.id) return;
+  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+  const tab = tabs[0];
+  if (!tab || !tab.id) return;
   try {
     const result = await chrome.tabs.sendMessage(tab.id, { type: "GET_FORMS" });
-    if (result?.forms?.length > 0) {
+    if (result && result.forms && result.forms.length > 0) {
       startFillSession(result.forms[0]);
     }
-  } catch {
+  } catch (_e) {
     // No content script on this tab; stay on main view
   }
 }
 
 async function loadSettings() {
   const res = await send({ type: "AUTH_STATE" });
-  if (!res?.authenticated) return;
+  if (!res || !res.authenticated) return;
+  const token = await getToken();
   const settings = await fetch("http://localhost:8000/api/v1/settings", {
-    headers: { Authorization: `Bearer ${await getToken()}` },
-  }).then((r) => r.json());
+    headers: { Authorization: "Bearer " + token },
+  }).then(function (r) { return r.json(); });
   state.settings = settings;
   applySettingsToUI();
 }
@@ -85,260 +86,335 @@ async function loadSettings() {
 function applySettingsToUI() {
   if (!state.settings) return;
   const s = state.settings;
-  (document.getElementById("set-language") as HTMLSelectElement).value = s.language;
-  (document.getElementById("set-mode") as HTMLSelectElement).value = s.autofill_mode;
-  (document.getElementById("set-limit") as HTMLInputElement).value = String(s.llm_daily_limit);
-  (document.getElementById("set-provider") as HTMLSelectElement).value = s.llm_provider;
-  (document.getElementById("set-model") as HTMLInputElement).value = s.llm_model;
-  (document.getElementById("set-ollama") as HTMLInputElement).value = s.ollama_base_url ?? "";
-  (document.getElementById("set-endpoint") as HTMLInputElement).value = s.custom_endpoint ?? "";
-  (document.getElementById("set-key-status") as HTMLElement).textContent =
-    s.llm_api_key_set ? "(set)" : "";
-  (document.getElementById("set-email-display") as HTMLElement).textContent =
-    `Signed in as: ${state.email ?? "—"}`;
+  const langEl = document.getElementById("set-language");
+  if (langEl) langEl.value = s.language;
+  const modeEl = document.getElementById("set-mode");
+  if (modeEl) modeEl.value = s.autofill_mode;
+  const limitEl = document.getElementById("set-limit");
+  if (limitEl) limitEl.value = String(s.llm_daily_limit);
+  const provEl = document.getElementById("set-provider");
+  if (provEl) provEl.value = s.llm_provider;
+  const modelEl = document.getElementById("set-model");
+  if (modelEl) modelEl.value = s.llm_model;
+  const ollamaEl = document.getElementById("set-ollama");
+  if (ollamaEl) ollamaEl.value = s.ollama_base_url || "";
+  const endpEl = document.getElementById("set-endpoint");
+  if (endpEl) endpEl.value = s.custom_endpoint || "";
+  const keyStatus = document.getElementById("set-key-status");
+  if (keyStatus) keyStatus.textContent = s.llm_api_key_set ? "(set)" : "";
+  const emailDisplay = document.getElementById("set-email-display");
+  if (emailDisplay) emailDisplay.textContent = "Signed in as: " + (state.email || "—");
   // Toggle conditional fields
   const ollamaVisible = s.llm_provider === "ollama";
   const customVisible = s.llm_provider === "custom";
-  document.getElementById("field-ollama-url")?.classList.toggle("hidden", !ollamaVisible);
-  document.getElementById("field-custom-endpoint")?.classList.toggle("hidden", !customVisible);
-  (document.getElementById("user-email") as HTMLElement).textContent =
-    state.email?.split("@")[0] ?? "there";
+  const fieldOllama = document.getElementById("field-ollama-url");
+  if (fieldOllama) fieldOllama.classList.toggle("hidden", !ollamaVisible);
+  const fieldCustom = document.getElementById("field-custom-endpoint");
+  if (fieldCustom) fieldCustom.classList.toggle("hidden", !customVisible);
+  const userEmail = document.getElementById("user-email");
+  if (userEmail) userEmail.textContent = (state.email && state.email.split("@")[0]) || "there";
 }
 
-async function getToken(): Promise<string> {
+async function getToken() {
   const stored = await chrome.storage.session.get("accessToken");
-  return stored.accessToken ?? "";
+  return stored.accessToken || "";
 }
 
 // ---------- EVENTS ----------
 function wireEvents() {
   // Login
-  document.getElementById("login-form")?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const email = (document.getElementById("email") as HTMLInputElement).value;
-    const password = (document.getElementById("password") as HTMLInputElement).value;
-    const btn = (e.target as HTMLFormElement).querySelector("button[type=submit]") as HTMLButtonElement;
-    btn.disabled = true;
-    const res = await send({ type: "AUTH_LOGIN", email, password });
-    btn.disabled = false;
-    if (res?.ok) {
-      state.authenticated = true;
-      state.email = email;
-      await loadSettings();
-      showView("main");
-      toast("Signed in", "ok");
-    } else {
-      toast(res?.error ?? "Login failed", "err");
-    }
-  });
-
-  // Login -> Register
-  document.getElementById("goto-signup")?.addEventListener("click", () => {
-    showView("register");
-  });
-
-  // Register -> Login
-  document.getElementById("goto-login")?.addEventListener("click", () => {
-    showView("login");
-  });
-
-  // Register form
-  document.getElementById("register-form")?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const email = (document.getElementById("reg-email") as HTMLInputElement).value;
-    const password = (document.getElementById("reg-password") as HTMLInputElement).value;
-    const confirm = (document.getElementById("reg-confirm") as HTMLInputElement).value;
-    if (password !== confirm) {
-      toast("Passwords do not match", "err");
-      return;
-    }
-    const btn = (e.target as HTMLFormElement).querySelector("button[type=submit]") as HTMLButtonElement;
-    btn.disabled = true;
-    try {
-      const res = await fetch("http://localhost:8000/api/v1/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, language: "en", consent_terms: true }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        await chrome.storage.session.set({ accessToken: data.access_token, refreshToken: data.refresh_token });
+  const loginForm = document.getElementById("login-form");
+  if (loginForm) {
+    loginForm.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      const btn = e.target.querySelector("button[type=submit]");
+      btn.disabled = true;
+      const res = await send({ type: "AUTH_LOGIN", email: email, password: password });
+      btn.disabled = false;
+      if (res && res.ok) {
         state.authenticated = true;
         state.email = email;
         await loadSettings();
         showView("main");
-        toast("Account created", "ok");
+        toast("Signed in", "ok");
       } else {
-        toast(data.detail ?? data.message ?? "Registration failed", "err");
+        toast((res && res.error) || "Login failed", "err");
       }
-    } catch (err) {
-      toast("Cannot reach server: " + (err as Error).message, "err");
-    } finally {
-      btn.disabled = false;
-    }
-  });
-
-  // Main -> Settings
-  document.getElementById("goto-settings")?.addEventListener("click", () => {
-    showView("settings");
-    activateTab("general");
-  });
-
-  // Settings -> Back
-  document.getElementById("settings-back")?.addEventListener("click", () => {
-    showView(state.fillSession ? "fill" : "main");
-  });
-
-  // Tabs
-  for (const t of document.querySelectorAll<HTMLElement>(".tab")) {
-    t.addEventListener("click", () => activateTab(t.dataset.tab as any));
+    });
   }
 
-  // Provider change -> show/hide conditional fields
-  document.getElementById("set-provider")?.addEventListener("change", (e) => {
-    const v = (e.target as HTMLSelectElement).value;
-    document.getElementById("field-ollama-url")?.classList.toggle("hidden", v !== "ollama");
-    document.getElementById("field-custom-endpoint")?.classList.toggle("hidden", v !== "custom");
-  });
+  // Login -> Register
+  const gotoSignup = document.getElementById("goto-signup");
+  if (gotoSignup) {
+    gotoSignup.addEventListener("click", function () {
+      showView("register");
+    });
+  }
+
+  // Register -> Login
+  const gotoLogin = document.getElementById("goto-login");
+  if (gotoLogin) {
+    gotoLogin.addEventListener("click", function () {
+      showView("login");
+    });
+  }
+
+  // Register form
+  const registerForm = document.getElementById("register-form");
+  if (registerForm) {
+    registerForm.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const email = document.getElementById("reg-email").value;
+      const password = document.getElementById("reg-password").value;
+      const confirm = document.getElementById("reg-confirm").value;
+      if (password !== confirm) {
+        toast("Passwords do not match", "err");
+        return;
+      }
+      const btn = e.target.querySelector("button[type=submit]");
+      btn.disabled = true;
+      try {
+        const res = await fetch("http://localhost:8000/api/v1/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email, password: password, language: "en", consent_terms: true }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          await chrome.storage.session.set({ accessToken: data.access_token, refreshToken: data.refresh_token });
+          state.authenticated = true;
+          state.email = email;
+          await loadSettings();
+          showView("main");
+          toast("Account created", "ok");
+        } else {
+          toast(data.detail || data.message || "Registration failed", "err");
+        }
+      } catch (err) {
+        toast("Cannot reach server: " + err.message, "err");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+
+  // Main -> Settings
+  const gotoSettings = document.getElementById("goto-settings");
+  if (gotoSettings) {
+    gotoSettings.addEventListener("click", function () {
+      showView("settings");
+      activateTab("general");
+    });
+  }
+
+  // Settings -> Back
+  const settingsBack = document.getElementById("settings-back");
+  if (settingsBack) {
+    settingsBack.addEventListener("click", function () {
+      showView(state.fillSession ? "fill" : "main");
+    });
+  }
+
+  // Tabs
+  for (const t of document.querySelectorAll(".tab")) {
+    t.addEventListener("click", function () { activateTab(t.dataset.tab); });
+  }
+
+  // Provider change
+  const setProvider = document.getElementById("set-provider");
+  if (setProvider) {
+    setProvider.addEventListener("change", function (e) {
+      const v = e.target.value;
+      const fieldOllama = document.getElementById("field-ollama-url");
+      if (fieldOllama) fieldOllama.classList.toggle("hidden", v !== "ollama");
+      const fieldCustom = document.getElementById("field-custom-endpoint");
+      if (fieldCustom) fieldCustom.classList.toggle("hidden", v !== "custom");
+    });
+  }
 
   // Save general settings
-  document.getElementById("set-language")?.addEventListener("change", () => saveSettings());
-  document.getElementById("set-mode")?.addEventListener("change", () => saveSettings());
-  document.getElementById("set-limit")?.addEventListener("change", () => saveSettings());
+  const setLanguage = document.getElementById("set-language");
+  if (setLanguage) setLanguage.addEventListener("change", function () { saveSettings(); });
+  const setMode = document.getElementById("set-mode");
+  if (setMode) setMode.addEventListener("change", function () { saveSettings(); });
+  const setLimit = document.getElementById("set-limit");
+  if (setLimit) setLimit.addEventListener("change", function () { saveSettings(); });
 
   // Save LLM settings
-  document.getElementById("set-save-llm")?.addEventListener("click", () => saveLLMSettings());
+  const setSaveLlm = document.getElementById("set-save-llm");
+  if (setSaveLlm) setSaveLlm.addEventListener("click", function () { saveLLMSettings(); });
 
   // Test connection
-  document.getElementById("set-test")?.addEventListener("click", async () => {
-    const out = document.getElementById("set-test-result")!;
-    out.textContent = "Testing...";
-    const token = await getToken();
-    const res = await fetch("http://localhost:8000/api/v1/settings/llm/test", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
+  const setTest = document.getElementById("set-test");
+  if (setTest) {
+    setTest.addEventListener("click", async function () {
+      const out = document.getElementById("set-test-result");
+      out.textContent = "Testing...";
+      const token = await getToken();
+      try {
+        const res = await fetch("http://localhost:8000/api/v1/settings/llm/test", {
+          method: "POST",
+          headers: { Authorization: "Bearer " + token },
+        });
+        const data = await res.json();
+        out.textContent = data.ok ? "\u2713 " + data.message : "\u2717 " + data.message;
+        out.style.color = data.ok ? "#047857" : "#b91c1c";
+      } catch (_e) {
+        out.textContent = "\u2717 Cannot reach server";
+        out.style.color = "#b91c1c";
+      }
     });
-    const data = await res.json();
-    out.textContent = data.ok ? "✓ " + data.message : "✗ " + data.message;
-    out.style.color = data.ok ? "#047857" : "#b91c1c";
-  });
+  }
 
   // Logout
-  document.getElementById("set-logout")?.addEventListener("click", async () => {
-    await send({ type: "AUTH_LOGOUT" });
-    state.authenticated = false;
-    state.email = null;
-    state.settings = null;
-    showView("login");
-    toast("Signed out", "ok");
-  });
+  const setLogout = document.getElementById("set-logout");
+  if (setLogout) {
+    setLogout.addEventListener("click", async function () {
+      await send({ type: "AUTH_LOGOUT" });
+      state.authenticated = false;
+      state.email = null;
+      state.settings = null;
+      showView("login");
+      toast("Signed out", "ok");
+    });
+  }
 
   // Fill apply
-  document.getElementById("fill-apply")?.addEventListener("click", async () => {
-    if (!state.fillSession) return;
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id) return;
-    await chrome.tabs.sendMessage(tab.id, {
-      type: "APPLY_MAPPING",
-      mapping: state.fillSession.mapping,
+  const fillApply = document.getElementById("fill-apply");
+  if (fillApply) {
+    fillApply.addEventListener("click", async function () {
+      if (!state.fillSession) return;
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      const tab = tabs[0];
+      if (!tab || !tab.id) return;
+      await chrome.tabs.sendMessage(tab.id, {
+        type: "APPLY_MAPPING",
+        mapping: state.fillSession.mapping,
+      });
+      toast("Applied to page", "ok");
+      showView("main");
     });
-    toast("Applied to page", "ok");
-    showView("main");
-  });
+  }
 
   // Fill cancel
-  document.getElementById("fill-cancel")?.addEventListener("click", () => {
-    state.fillSession = null;
-    showView("main");
-  });
+  const fillCancel = document.getElementById("fill-cancel");
+  if (fillCancel) {
+    fillCancel.addEventListener("click", function () {
+      state.fillSession = null;
+      showView("main");
+    });
+  }
 
   // Footer help
-  document.getElementById("footer-help")?.addEventListener("click", (e) => {
-    e.preventDefault();
-    chrome.tabs.create({ url: "http://localhost:8000/docs" });
-  });
+  const footerHelp = document.getElementById("footer-help");
+  if (footerHelp) {
+    footerHelp.addEventListener("click", function (e) {
+      e.preventDefault();
+      chrome.tabs.create({ url: "http://localhost:8000/docs" });
+    });
+  }
 }
 
 async function saveSettings() {
+  const langEl = document.getElementById("set-language");
+  const modeEl = document.getElementById("set-mode");
+  const limitEl = document.getElementById("set-limit");
   const patch = {
-    language: (document.getElementById("set-language") as HTMLSelectElement).value,
-    autofill_mode: (document.getElementById("set-mode") as HTMLSelectElement).value,
-    llm_daily_limit: parseInt((document.getElementById("set-limit") as HTMLInputElement).value, 10),
+    language: langEl ? langEl.value : "en",
+    autofill_mode: modeEl ? modeEl.value : "review",
+    llm_daily_limit: Number(limitEl ? limitEl.value : 100),
   };
   const token = await getToken();
-  const res = await fetch("http://localhost:8000/api/v1/settings", {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify(patch),
-  });
-  if (res.ok) {
-    state.settings = await res.json();
-    flashStatus("Saved", "ok");
-  } else {
+  try {
+    const res = await fetch("http://localhost:8000/api/v1/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+      body: JSON.stringify(patch),
+    });
+    if (res.ok) {
+      state.settings = await res.json();
+      flashStatus("Saved", "ok");
+    } else {
+      flashStatus("Save failed", "err");
+    }
+  } catch (_e) {
     flashStatus("Save failed", "err");
   }
 }
 
 async function saveLLMSettings() {
-  const patch: any = {
-    llm_provider: (document.getElementById("set-provider") as HTMLSelectElement).value,
-    llm_model: (document.getElementById("set-model") as HTMLInputElement).value,
-  };
-  const key = (document.getElementById("set-key") as HTMLInputElement).value;
+  const provEl = document.getElementById("set-provider");
+  const modelEl = document.getElementById("set-model");
+  const keyEl = document.getElementById("set-key");
+  const ollamaEl = document.getElementById("set-ollama");
+  const endpEl = document.getElementById("set-endpoint");
+  const patch = {};
+  if (provEl) patch.llm_provider = provEl.value;
+  if (modelEl) patch.llm_model = modelEl.value;
+  const key = keyEl ? keyEl.value : "";
   if (key) patch.llm_api_key = key;
-  const ollama = (document.getElementById("set-ollama") as HTMLInputElement).value;
+  const ollama = ollamaEl ? ollamaEl.value : "";
   if (ollama) patch.ollama_base_url = ollama;
-  const endpoint = (document.getElementById("set-endpoint") as HTMLInputElement).value;
+  const endpoint = endpEl ? endpEl.value : "";
   if (endpoint) patch.custom_endpoint = endpoint;
   const token = await getToken();
-  const res = await fetch("http://localhost:8000/api/v1/settings", {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify(patch),
-  });
-  if (res.ok) {
-    state.settings = await res.json();
-    applySettingsToUI();
-    (document.getElementById("set-key") as HTMLInputElement).value = "";
-    flashStatus("Saved", "ok");
-  } else {
-    const body = await res.json().catch(() => ({}));
-    flashStatus(body.message ?? "Save failed", "err");
+  try {
+    const res = await fetch("http://localhost:8000/api/v1/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+      body: JSON.stringify(patch),
+    });
+    if (res.ok) {
+      state.settings = await res.json();
+      applySettingsToUI();
+      if (keyEl) keyEl.value = "";
+      flashStatus("Saved", "ok");
+    } else {
+      const body = await res.json().catch(function () { return {}; });
+      flashStatus(body.message || "Save failed", "err");
+    }
+  } catch (_e) {
+    flashStatus("Save failed", "err");
   }
 }
 
-function flashStatus(text: string, kind: "ok" | "err") {
-  const el = document.getElementById("settings-status")!;
+function flashStatus(text, kind) {
+  const el = document.getElementById("settings-status");
+  if (!el) return;
   el.textContent = text;
   el.style.color = kind === "ok" ? "#047857" : "#b91c1c";
-  setTimeout(() => {
+  setTimeout(function () {
     el.textContent = "Saved";
     el.style.color = "";
   }, 2000);
 }
 
 // ---------- FILL SESSION ----------
-async function startFillSession(forms: any[]) {
-  // For v1: simplified — show a single-form preview
+async function startFillSession(forms) {
   const form = forms[0];
   state.fillSession = {
     domain: form.domain,
     fields: form.fields,
-    mapping: {} as Record<string, any>,
+    mapping: {},
   };
   state.fields = form.fields;
   showView("fill");
-  (document.getElementById("fill-domain") as HTMLElement).textContent = form.domain;
+  const domainEl = document.getElementById("fill-domain");
+  if (domainEl) domainEl.textContent = form.domain;
 
-  const list = document.getElementById("fill-list")!;
+  const list = document.getElementById("fill-list");
+  if (!list) return;
   list.innerHTML = form.fields
-    .map(
-      (f: any) =>
-        `<div class="field-row" data-id="${f.field_id}">
-          <span class="name">${escapeHtml(f.label || f.name || f.id)}</span>
-          <span class="badge skip" data-status>pending</span>
-        </div>`,
-    )
+    .map(function (f) {
+      return (
+        "<div class=\"field-row\" data-id=\"" + f.field_id + "\">" +
+          "<span class=\"name\">" + escapeHtml(f.label || f.name || f.id) + "</span>" +
+          "<span class=\"badge skip\" data-status>pending</span>" +
+        "</div>"
+      );
+    })
     .join("");
 
   // Open WebSocket to backend
@@ -348,8 +424,8 @@ async function startFillSession(forms: any[]) {
     showView("main");
     return;
   }
-  const ws = new WebSocket(`ws://localhost:8000/ws/fill?token=${encodeURIComponent(token)}`);
-  ws.onopen = () => {
+  const ws = new WebSocket("ws://localhost:8000/ws/fill?token=" + encodeURIComponent(token));
+  ws.onopen = function () {
     ws.send(
       JSON.stringify({
         type: "FILL_REQUEST",
@@ -359,53 +435,63 @@ async function startFillSession(forms: any[]) {
       }),
     );
   };
-  ws.onmessage = (ev) => {
+  ws.onmessage = function (ev) {
     const msg = JSON.parse(ev.data);
     if (msg.type === "FILL_PROGRESS") {
-      const row = list.querySelector(`[data-id="${msg.field_id}"]`);
+      const row = list.querySelector("[data-id=\"" + msg.field_id + "\"]");
       if (row) {
-        const badge = row.querySelector("[data-status]")!;
-        badge.className = `badge ${msg.status}`;
-        badge.textContent = msg.status;
+        const badge = row.querySelector("[data-status]");
+        if (badge) {
+          badge.className = "badge " + msg.status;
+          badge.textContent = msg.status;
+        }
       }
       updateProgress();
     } else if (msg.type === "FILL_COMPLETE") {
       state.fillSession.mapping = msg.mapping;
-      (document.getElementById("fill-apply") as HTMLButtonElement).disabled = false;
-      flashSummary(`Ready — ${Object.keys(msg.mapping).length} fields resolved`);
+      const fillApply = document.getElementById("fill-apply");
+      if (fillApply) fillApply.disabled = false;
+      flashSummary("Ready — " + Object.keys(msg.mapping).length + " fields resolved");
       ws.close();
     }
   };
-  ws.onerror = () => {
+  ws.onerror = function () {
     toast("Cannot reach backend", "err");
   };
-  ws.onclose = () => {};
 }
 
 function updateProgress() {
   const total = state.fields.length;
-  const resolved = state.fields.filter((f: any) => {
-    const row = document.querySelector(`[data-id="${f.field_id}"]`);
-    const badge = row?.querySelector("[data-status]") as HTMLElement | null;
-    return badge && !["pending", "skipped", "error"].includes(badge.textContent ?? "");
-  }).length;
+  var resolved = 0;
+  for (var i = 0; i < state.fields.length; i++) {
+    const f = state.fields[i];
+    const row = document.querySelector("[data-id=\"" + f.field_id + "\"]");
+    if (row) {
+      const badge = row.querySelector("[data-status]");
+      if (badge && ["pending", "skipped", "error"].indexOf(badge.textContent) === -1) {
+        resolved++;
+      }
+    }
+  }
   const pct = total > 0 ? Math.round((resolved / total) * 100) : 0;
-  (document.getElementById("fill-progress") as HTMLElement).style.width = `${pct}%`;
-  (document.getElementById("fill-summary") as HTMLElement).textContent =
-    `Resolving ${resolved} / ${total} fields…`;
+  const progressFill = document.getElementById("fill-progress");
+  if (progressFill) progressFill.style.width = pct + "%";
+  const summary = document.getElementById("fill-summary");
+  if (summary) summary.textContent = "Resolving " + resolved + " / " + total + " fields\u2026";
 }
 
-function flashSummary(text: string) {
-  (document.getElementById("fill-summary") as HTMLElement).textContent = text;
+function flashSummary(text) {
+  const el = document.getElementById("fill-summary");
+  if (el) el.textContent = text;
 }
 
-function escapeHtml(s: string): string {
+function escapeHtml(s) {
   const div = document.createElement("div");
   div.textContent = s;
   return div.innerHTML;
 }
 
-boot().catch((e) => {
+boot().catch(function (e) {
   console.error("boot error", e);
-  toast("Init error: " + (e as Error).message, "err");
+  toast("Init error: " + e.message, "err");
 });
