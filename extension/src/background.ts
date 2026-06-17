@@ -18,14 +18,23 @@ async function openSidebar(pendingFill = false) {
   for (const w of existing) {
     try { await chrome.windows.remove(w.id!); } catch { /* ignore */ }
   }
-  const screen = await chrome.windows.getCurrent();
+  // Get screen dimensions from the last focused (main) window
+  let w = 1024;
+  let h = 900;
+  let l = 0;
+  try {
+    const main = await chrome.windows.getLastFocused();
+    w = main.width ?? 1024;
+    h = main.height ?? 900;
+    l = main.left ?? 0;
+  } catch { /* use defaults */ }
   chrome.windows.create({
     url: chrome.runtime.getURL("popup.html"),
     type: "popup",
     width: SIDEBAR_WIDTH,
-    height: (screen.height ?? 900),
+    height: h,
     top: 0,
-    left: (screen.left ?? 0) + (screen.width ?? 1024) - SIDEBAR_WIDTH,
+    left: l + w - SIDEBAR_WIDTH,
     focused: true,
   });
 }
