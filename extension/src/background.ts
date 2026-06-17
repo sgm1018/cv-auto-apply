@@ -2,11 +2,38 @@
 import type { Message, Profile, Settings } from "./types.js";
 
 const API_BASE = "http://localhost:8000";
+const SIDEBAR_WIDTH = 420;
 
 let accessToken: string | null = null;
 let refreshToken: string | null = null;
 let cachedProfile: Profile | null = null;
 let cachedSettings: Settings | null = null;
+
+async function openSidebar(pendingFill = false) {
+  if (pendingFill) {
+    await chrome.storage.session.set({ pendingFill: true });
+  }
+  // Close any existing popup window first
+  const existing = await chrome.windows.getAll({ windowTypes: ["popup"] });
+  for (const w of existing) {
+    try { await chrome.windows.remove(w.id!); } catch { /* ignore */ }
+  }
+  const screen = await chrome.windows.getCurrent();
+  chrome.windows.create({
+    url: chrome.runtime.getURL("popup.html"),
+    type: "popup",
+    width: SIDEBAR_WIDTH,
+    height: (screen.height ?? 900),
+    top: 0,
+    left: (screen.left ?? 0) + (screen.width ?? 1024) - SIDEBAR_WIDTH,
+    focused: true,
+  });
+}
+
+// Extension icon clicked → open sidebar
+chrome.action.onClicked.addListener(() => {
+  void openSidebar(false);
+});
 
 async function loadTokens() {
   const stored = await chrome.storage.session.get(["accessToken", "refreshToken"]);
@@ -130,14 +157,8 @@ chrome.runtime.onMessage.addListener((msg: Message, _sender, sendResponse) => {
           break;
         }
         case "TRIGGER_FILL": {
-          // Banner button was clicked. Try to open the popup and signal it to trigger fill.
-          try {
-            await chrome.action.openPopup();
-          } catch {
-            // openPopup may not be available; fallback: store a flag the popup reads on boot
-            await chrome.storage.session.set({ pendingFill: true });
-            try { await chrome.action.openPopup(); } catch { /* ignore */ }
-          }
+          // Banner button clicked → open sidebar with fill signal
+          void openSidebar(true);
           sendResponse({ ok: true });
           break;
         }

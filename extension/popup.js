@@ -420,6 +420,60 @@ function wireEvents() {
     });
   }
 
+  // Add education entry
+  var pfEduAdd = document.getElementById("pf-edu-add");
+  if (pfEduAdd) {
+    pfEduAdd.addEventListener("click", function () {
+      var current = collectEduCards();
+      current.push({ institution: "", degree: null, field: null, start_date: null, end_date: null });
+      renderEduCards(current);
+    });
+  }
+
+  // Add certification entry
+  var pfCertAdd = document.getElementById("pf-cert-add");
+  if (pfCertAdd) {
+    pfCertAdd.addEventListener("click", function () {
+      var current = collectCertCards();
+      current.push({ name: "", issuer: null, issue_date: null });
+      renderCertCards(current);
+    });
+  }
+
+  // Delegated delete for education/certification cards
+  var pfEduCards = document.getElementById("pf-edu-cards");
+  if (pfEduCards) {
+    pfEduCards.addEventListener("click", function (e) {
+      var btn = e.target;
+      if (!(btn instanceof HTMLElement)) return;
+      if (btn.dataset.action === "del-edu") {
+        var current = collectEduCards();
+        var card = btn.closest(".card");
+        if (card && card.dataset.eduIdx !== undefined) {
+          var idx = parseInt(card.dataset.eduIdx, 10);
+          current.splice(idx, 1);
+        }
+        renderEduCards(current);
+      }
+    });
+  }
+  var pfCertCards = document.getElementById("pf-cert-cards");
+  if (pfCertCards) {
+    pfCertCards.addEventListener("click", function (e) {
+      var btn = e.target;
+      if (!(btn instanceof HTMLElement)) return;
+      if (btn.dataset.action === "del-cert") {
+        var current = collectCertCards();
+        var card = btn.closest(".card");
+        if (card && card.dataset.certIdx !== undefined) {
+          var idx = parseInt(card.dataset.certIdx, 10);
+          current.splice(idx, 1);
+        }
+        renderCertCards(current);
+      }
+    });
+  }
+
   // Test connection
   const setTest = document.getElementById("set-test");
   if (setTest) {
@@ -755,30 +809,10 @@ async function loadProfile() {
       if (expCount) expCount.textContent = "";
       expTextarea.value = "";
     }
-    // Education textarea
-    var eduCount = document.getElementById("pf-edu-count");
-    var eduTextarea = document.getElementById("pf-edu-textarea");
-    if (eduTextarea && p.education && p.education.length > 0) {
-      if (eduCount) eduCount.textContent = "(" + p.education.length + ")";
-      eduTextarea.value = p.education.map(function (e) {
-        return [e.institution || "", e.degree || "", e.field || "", e.start_date || "", e.end_date || ""].join(" | ");
-      }).join("\n");
-    } else if (eduTextarea) {
-      if (eduCount) eduCount.textContent = "";
-      eduTextarea.value = "";
-    }
-    // Certifications textarea
-    var certCount = document.getElementById("pf-cert-count");
-    var certTextarea = document.getElementById("pf-cert-textarea");
-    if (certTextarea && p.certifications && p.certifications.length > 0) {
-      if (certCount) certCount.textContent = "(" + p.certifications.length + ")";
-      certTextarea.value = p.certifications.map(function (c) {
-        return [c.name || "", c.issuer || "", c.issue_date || ""].join(" | ");
-      }).join("\n");
-    } else if (certTextarea) {
-      if (certCount) certCount.textContent = "";
-      certTextarea.value = "";
-    }
+    // Education cards
+    renderEduCards(p.education || []);
+    // Certifications cards
+    renderCertCards(p.certifications || []);
   } catch (_e) { /* silent */ }
 }
 
@@ -832,31 +866,11 @@ async function saveProfile() {
     };
   }).filter(Boolean) : [];
 
-  // Parse education textarea
-  var eduText = getStr("pf-edu-textarea");
-  var education = eduText ? eduText.split("\n").map(function (line) {
-    var parts = line.split("|").map(function (s) { return s.trim(); });
-    if (!parts[0]) return null;
-    return {
-      institution: parts[0] || "",
-      degree: parts[1] || null,
-      field: parts[2] || null,
-      start_date: parts[3] || null,
-      end_date: parts[4] || null,
-    };
-  }).filter(Boolean) : [];
+  // Collect from education cards
+  var education = collectEduCards();
 
-  // Parse certifications textarea
-  var certText = getStr("pf-cert-textarea");
-  var certifications = certText ? certText.split("\n").map(function (line) {
-    var parts = line.split("|").map(function (s) { return s.trim(); });
-    if (!parts[0]) return null;
-    return {
-      name: parts[0] || "",
-      issuer: parts[1] || null,
-      issue_date: parts[2] || null,
-    };
-  }).filter(Boolean) : [];
+  // Collect from certification cards
+  var certifications = collectCertCards();
 
   var body = {
     first_name: getStr("pf-first-name") || null,
@@ -1000,6 +1014,94 @@ function updateProgress() {
 function flashSummary(text) {
   const el = document.getElementById("fill-summary");
   if (el) el.textContent = text;
+}
+
+function renderEduCards(items) {
+  var container = document.getElementById("pf-edu-cards");
+  var count = document.getElementById("pf-edu-count");
+  if (!container) return;
+  if (count) count.textContent = items.length > 0 ? "(" + items.length + ")" : "";
+  container.innerHTML = items.map(function (e, i) {
+    return (
+      '<div class="card" style="padding:8px; margin-bottom:6px;" data-edu-idx="' + i + '">' +
+        '<div class="cf-row">' +
+          '<span class="cf-label">Institution</span>' +
+          '<input class="cf-input pf-edu-inst" value="' + escapeHtml(e.institution || "") + '" placeholder="University" />' +
+          '<button class="cf-del" data-action="del-edu">&times;</button>' +
+        '</div>' +
+        '<div class="cf-row">' +
+          '<span class="cf-label">Degree</span>' +
+          '<input class="cf-input pf-edu-degree" value="' + escapeHtml(e.degree || "") + '" placeholder="BSc" />' +
+          '<span class="cf-label">Field</span>' +
+          '<input class="cf-input pf-edu-field" value="' + escapeHtml(e.field || "") + '" placeholder="CS" />' +
+        '</div>' +
+        '<div class="cf-row">' +
+          '<span class="cf-label">Start</span>' +
+          '<input class="cf-input pf-edu-start" value="' + escapeHtml(e.start_date || "") + '" placeholder="YYYY" />' +
+          '<span class="cf-label">End</span>' +
+          '<input class="cf-input pf-edu-end" value="' + escapeHtml(e.end_date || "") + '" placeholder="YYYY" />' +
+        '</div>' +
+      '</div>'
+    );
+  }).join("");
+}
+
+function collectEduCards() {
+  var cards = document.querySelectorAll("#pf-edu-cards .card");
+  var result = [];
+  for (var i = 0; i < cards.length; i++) {
+    var c = cards[i];
+    var inst = (c.querySelector(".pf-edu-inst") || {}).value || "";
+    if (!inst) continue;
+    result.push({
+      institution: inst,
+      degree: ((c.querySelector(".pf-edu-degree") || {}).value || "") || null,
+      field: ((c.querySelector(".pf-edu-field") || {}).value || "") || null,
+      start_date: ((c.querySelector(".pf-edu-start") || {}).value || "") || null,
+      end_date: ((c.querySelector(".pf-edu-end") || {}).value || "") || null,
+    });
+  }
+  return result;
+}
+
+function renderCertCards(items) {
+  var container = document.getElementById("pf-cert-cards");
+  var count = document.getElementById("pf-cert-count");
+  if (!container) return;
+  if (count) count.textContent = items.length > 0 ? "(" + items.length + ")" : "";
+  container.innerHTML = items.map(function (c, i) {
+    return (
+      '<div class="card" style="padding:8px; margin-bottom:6px;" data-cert-idx="' + i + '">' +
+        '<div class="cf-row">' +
+          '<span class="cf-label">Name</span>' +
+          '<input class="cf-input pf-cert-name" value="' + escapeHtml(c.name || "") + '" placeholder="AWS Solutions Architect" />' +
+          '<button class="cf-del" data-action="del-cert">&times;</button>' +
+        '</div>' +
+        '<div class="cf-row">' +
+          '<span class="cf-label">Issuer</span>' +
+          '<input class="cf-input pf-cert-issuer" value="' + escapeHtml(c.issuer || "") + '" placeholder="Amazon" />' +
+          '<span class="cf-label">Date</span>' +
+          '<input class="cf-input pf-cert-date" value="' + escapeHtml(c.issue_date || "") + '" placeholder="YYYY-MM" />' +
+        '</div>' +
+      '</div>'
+    );
+  }).join("");
+}
+
+function collectCertCards() {
+  var cards = document.querySelectorAll("#pf-cert-cards .card");
+  var result = [];
+  for (var i = 0; i < cards.length; i++) {
+    var c = cards[i];
+    var name = (c.querySelector(".pf-cert-name") || {}).value || "";
+    if (!name) continue;
+    result.push({
+      name: name,
+      issuer: ((c.querySelector(".pf-cert-issuer") || {}).value || "") || null,
+      issue_date: ((c.querySelector(".pf-cert-date") || {}).value || "") || null,
+    });
+  }
+  return result;
 }
 
 function escapeHtml(s) {
