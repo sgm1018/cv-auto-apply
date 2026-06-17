@@ -253,10 +253,19 @@ function wireEvents() {
       const out = document.getElementById("set-test-result");
       out.textContent = "Testing...";
       const token = await getToken();
+      const keyEl = document.getElementById("set-key");
+      const provEl = document.getElementById("set-provider");
+      const modelEl = document.getElementById("set-model");
+      const body = {};
+      const key = keyEl ? keyEl.value : "";
+      if (key) body.api_key = key;
+      if (provEl && provEl.value) body.provider = provEl.value;
+      if (modelEl && modelEl.value) body.model = modelEl.value;
       try {
         const res = await fetch("http://localhost:8000/api/v1/settings/llm/test", {
           method: "POST",
-          headers: { Authorization: "Bearer " + token },
+          headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+          body: JSON.stringify(body),
         });
         const data = await res.json();
         out.textContent = data.ok ? "\u2713 " + data.message : "\u2717 " + data.message;

@@ -7,7 +7,7 @@ from cvapplier.services.encryption import decrypt_api_key, encrypt_api_key
 
 
 VALID_MODELS = {
-    "deepseek": ["deepseek-chat"],
+    "deepseek": ["deepseek-chat", "deepseek-reasoner", "deepseek-coder"],
     "openai": ["gpt-4o-mini", "gpt-4.1-mini"],
     "anthropic": ["claude-3-5-haiku-20241022"],
     "ollama": ["llama3.1:8b-instruct-q4_K_M", "qwen2.5:7b-instruct-q4_K_M"],

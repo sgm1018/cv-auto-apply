@@ -16,6 +16,12 @@ class SettingsUpdateRequest(BaseModel):
     notifications_enabled: Optional[bool] = None
 
 
+class LLMTestRequest(BaseModel):
+    api_key: Optional[str] = Field(default=None, max_length=500)
+    provider: Optional[str] = None
+    model: Optional[str] = Field(default=None, max_length=120)
+
+
 class LLMTestResponse(BaseModel):
     ok: bool
     model: str

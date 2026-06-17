@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from cvapplier.core.deps import get_current_user
 from cvapplier.models.user import User
 from cvapplier.schemas.settings_get import SettingsResponse
-from cvapplier.schemas.settings_update import LLMTestResponse, SettingsUpdateRequest
+from cvapplier.schemas.settings_update import LLMTestRequest, LLMTestResponse, SettingsUpdateRequest
 from cvapplier.services.llm_gateway import LLMGateway
 from cvapplier.services.settings_service import SettingsService
 
@@ -26,13 +26,17 @@ async def patch_settings(
 
 
 @router.post("/llm/test", response_model=LLMTestResponse)
-async def llm_test(user: User = Depends(get_current_user)) -> LLMTestResponse:
-    api_key = SettingsService().decrypt_api_key(user)
+async def llm_test(body: LLMTestRequest = LLMTestRequest(), user: User = Depends(get_current_user)) -> LLMTestResponse:
+    saved_key = SettingsService().decrypt_api_key(user)
+    api_key = body.api_key or saved_key
+    provider = body.provider or user.settings.get("llm_provider", "deepseek")
+    model = body.model or user.settings.get("llm_model", "deepseek-chat")
+    api_base = user.settings.get("ollama_base_url") or user.settings.get("custom_endpoint")
     gw = LLMGateway(
-        provider=user.settings.get("llm_provider", "deepseek"),
-        model=user.settings.get("llm_model", "deepseek-chat"),
+        provider=provider,
+        model=model,
         api_key=api_key,
-        api_base=user.settings.get("ollama_base_url") or user.settings.get("custom_endpoint"),
+        api_base=api_base,
     )
     try:
         await gw.ping()
