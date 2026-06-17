@@ -641,7 +641,7 @@ async function startFillSession(form) {
     showView("main");
     return;
   }
-  const ws = new WebSocket("ws://localhost:8000/ws/fill?token=" + encodeURIComponent(token));
+  const ws = new WebSocket("ws://localhost:8000/api/v1/ws/fill?token=" + encodeURIComponent(token));
   ws.onopen = function () {
     ws.send(
       JSON.stringify({
