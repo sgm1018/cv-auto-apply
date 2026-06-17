@@ -10,6 +10,7 @@ from cvapplier.core.config import get_settings
 from cvapplier.core.db import close_mongo, create_mongo_client, init_beanie
 from cvapplier.core.exceptions import register_exception_handlers
 from cvapplier.core.logging import configure_logging, get_logger
+from cvapplier.core.storage import ObjectStorage
 from cvapplier.models import CV, FeedbackEvent, FillSession, LearnedMapping, Profile, User
 
 log = get_logger(__name__)
@@ -27,6 +28,8 @@ async def lifespan(app: FastAPI):  # type: ignore[no-untyped-def]
         )
     except Exception as e:
         log.warning("beanie_init_failed_continuing", error=str(e))
+    storage = ObjectStorage()
+    await storage.check_connection()
     log.info("app_started", env=s.app_env)
     yield
     await close_mongo(client)

@@ -2,6 +2,9 @@
 import aioboto3
 
 from cvapplier.core.config import get_settings
+from cvapplier.core.logging import get_logger
+
+log = get_logger(__name__)
 
 
 class ObjectStorage:
@@ -24,6 +27,22 @@ class ObjectStorage:
             aws_secret_access_key=self._secret_key,
             use_ssl=self._use_ssl,
         )
+
+    async def check_connection(self) -> bool:
+        async with self.client() as s3:
+            try:
+                buckets = await s3.list_buckets()
+                bucket_names = [b["Name"] for b in buckets.get("Buckets", [])]
+                log.info("minio_connected", buckets=bucket_names, endpoint=self._endpoint)
+                if self.bucket not in bucket_names:
+                    await s3.create_bucket(Bucket=self.bucket)
+                    log.info("minio_bucket_created", bucket=self.bucket)
+                else:
+                    log.info("minio_bucket_exists", bucket=self.bucket)
+                return True
+            except Exception as e:
+                log.warning("minio_connection_failed", error=str(e), endpoint=self._endpoint)
+                return False
 
     def build_key(self, *, user_id: str, file_id: str, suffix: str) -> str:
         return f"cvs/{user_id}/{file_id}{suffix}"
