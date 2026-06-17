@@ -151,6 +151,21 @@ async function getToken() {
 }
 
 // ---------- CVs ----------
+async function parseCV(cvId, token) {
+  const res = await fetch("http://localhost:8000/api/v1/cvs/" + cvId + "/parse", {
+    method: "POST",
+    headers: { Authorization: "Bearer " + token },
+  });
+  const data = await res.json();
+  if (!res.ok || data.parse_status === "failed") {
+    var msg = data.parse_error || "Parse failed";
+    if (msg.indexOf("Authentication") >= 0 || msg.indexOf("InvalidKey") >= 0) {
+      msg = "Missing or invalid API key \u2014 set it in Settings \u2192 LLM";
+    }
+    toast(msg, "err");
+  }
+}
+
 async function loadCVs() {
   const list = document.getElementById("cv-list");
   if (!list) return;
@@ -456,6 +471,19 @@ function wireEvents() {
           status.style.color = "#047857";
           fileInput.value = "";
           await loadCVs();
+          // Auto-parse if this is the first CV
+          var cvs = [];
+          try {
+            const listRes = await fetch("http://localhost:8000/api/v1/cvs", {
+              headers: { Authorization: "Bearer " + token },
+            });
+            cvs = await listRes.json();
+          } catch (_e) { /* ignore */ }
+          if (cvs.length <= 1) {
+            toast("Only CV \u2014 auto-parsing\u2026", "ok");
+            await parseCV(data.cv_id, token);
+            await loadCVs();
+          }
         } else {
           const body = await res.json().catch(function () { return {}; });
           status.textContent = "\u2717 " + (body.detail || "Upload failed");
@@ -511,20 +539,10 @@ function wireEvents() {
         } else if (action === "parse") {
           target.disabled = true;
           target.textContent = "Parsing\u2026";
-          toast("Parsing CV with LLM\u2026", "ok");
-          const res = await fetch("http://localhost:8000/api/v1/cvs/" + cvId + "/parse", {
-            method: "POST",
-            headers: { Authorization: "Bearer " + token },
-          });
-          if (res.ok) {
-            toast("CV parsed", "ok");
-            await loadCVs();
-          } else {
-            target.disabled = false;
-            target.textContent = "Parse";
-            const data = await res.json().catch(function () { return {}; });
-            toast(data.parse_error || "Parse failed", "err");
-          }
+          await parseCV(cvId, token);
+          target.disabled = false;
+          target.textContent = "Parse";
+          await loadCVs();
         } else if (action === "confirm") {
           if (!confirm("Save parsed data to your profile?")) return;
           target.disabled = true;

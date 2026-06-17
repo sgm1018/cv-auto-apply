@@ -1,9 +1,12 @@
 """CV endpoints."""
+import asyncio
+
 from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import Response
 
 from cvapplier.core.deps import get_current_user
 from cvapplier.core.exceptions import NotFoundError
+from cvapplier.core.logging import get_logger
 from cvapplier.models.cv import CV
 from cvapplier.models.user import User
 from cvapplier.repositories.cv_repository import CVRepository
@@ -15,6 +18,8 @@ from cvapplier.services.cv_service import CVService
 from cvapplier.services.profile_service import ProfileService
 from cvapplier.services.settings_service import SettingsService
 from cvapplier.utils.time import utcnow
+
+log = get_logger(__name__)
 
 router = APIRouter(prefix="/cvs", tags=["cvs"])
 
@@ -65,9 +70,13 @@ async def download_cv(cv_id: str, user: User = Depends(get_current_user)) -> Res
 @router.patch("/{cv_id}/primary")
 async def set_primary(cv_id: str, user: User = Depends(get_current_user)) -> dict:
     repo = CVRepository()
-    if await repo.get_for_user(str(user.id), cv_id) is None:
+    cv = await repo.get_for_user(str(user.id), cv_id)
+    if cv is None:
         raise NotFoundError("CV not found")
     await CVService().set_primary(str(user.id), cv_id)
+    # Auto-parse in background when set as primary
+    if cv.parse_status in ("pending", "failed"):
+        asyncio.create_task(_auto_parse_cv(cv, user))
     return {"ok": True}
 
 
@@ -127,6 +136,33 @@ async def confirm_parse(cv_id: str, user: User = Depends(get_current_user)) -> d
     patch = {k: v for k, v in cv.parsed_data.items() if v is not None}
     await ProfileService().update(str(user.id), patch)
     return {"ok": True}
+
+
+async def _auto_parse_cv(cv: CV, user: User) -> None:
+    """Background task: parse a CV and update its status."""
+    cv.parse_status = "processing"
+    await cv.save()
+    try:
+        data = await CVService().download(user_id=str(user.id), cv_id=str(cv.id))
+        text = CVParserService.extract_text(cv.mime_type, data)
+        api_key = SettingsService().decrypt_api_key(user)
+        parsed = await CVParserService.parse_with_llm(
+            provider=user.settings.get("llm_provider", "deepseek"),
+            model=user.settings.get("llm_model", "deepseek-chat"),
+            api_key=api_key,
+            api_base=user.settings.get("ollama_base_url") or user.settings.get("custom_endpoint"),
+            text=text,
+        )
+        cv.parse_status = "done"
+        cv.parsed_data = parsed
+        cv.parsed_at = utcnow()
+        await cv.save()
+        log.info("cv_parsed", cv_id=str(cv.id), fields=len(parsed))
+    except Exception as e:
+        cv.parse_status = "failed"
+        cv.parse_error = str(e)[:500]
+        await cv.save()
+        log.warning("cv_parse_failed", cv_id=str(cv.id), error=str(e)[:200])
 
 
 
