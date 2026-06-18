@@ -1,7 +1,7 @@
 {
-  "name": "cvapplier-extension",
+  "name": "smartcvapply-extension",
   "version": "0.1.0",
-  "description": "CVApplier Chrome extension - auto-fill job application forms",
+  "description": "SmartCVapply Chrome extension - smart auto-fill for job applications",
   "private": true,
   "type": "module",
   "scripts": {

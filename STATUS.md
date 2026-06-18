@@ -1,4 +1,4 @@
-# CVApplier — Status
+# SmartCVapply — Status
 
 Estado de la implementación actual. **Esta es la v0.1 funcional**, suficiente para validar el concepto end-to-end.
 
@@ -69,7 +69,7 @@ cp .env.example .env
 # Opcional: arranca Mongo y MinIO
 docker run -d -p 27017:27017 --name cv-mongo mongo:7
 docker run -d -p 9000:9000 -p 9001:9001 -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin minio/minio server /data --console-address :9001
-uvicorn cvapplier.main:app --reload --port 8000
+uvicorn smartcvapply.main:app --reload --port 8000
 ```
 
 ### Extensión
@@ -106,10 +106,10 @@ CV-applier/
 ├── README.md                          # overview
 ├── STATUS.md                          # este archivo
 ├── docs/superpowers/
-│   ├── specs/2026-06-17-cvapplier-design.md   # diseño completo
-│   └── plans/2026-06-17-cvapplier-backend.md  # plan de implementación
+│   ├── specs/2026-06-17-smartcvapply-design.md   # diseño completo
+│   └── plans/2026-06-17-smartcvapply-backend.md  # plan de implementación
 ├── backend/                           # FastAPI + Mongo + S3 + LiteLLM
-│   ├── src/cvapplier/                 # package
+│   ├── src/smartcvapply/                 # package
 │   │   ├── core/                      # config, security, db, storage, exceptions
 │   │   ├── models/                    # Beanie Documents
 │   │   ├── schemas/                   # Pydantic DTOs, uno por fichero

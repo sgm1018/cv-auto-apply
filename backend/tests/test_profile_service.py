@@ -1,8 +1,8 @@
 """Tests for the profile service."""
 import pytest
 
-from cvapplier.repositories.user_repository import UserRepository
-from cvapplier.services.profile_service import ProfileService
+from smartcvapply.repositories.user_repository import UserRepository
+from smartcvapply.services.profile_service import ProfileService
 
 
 @pytest.mark.asyncio

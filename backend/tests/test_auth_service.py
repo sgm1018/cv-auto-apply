@@ -1,8 +1,8 @@
 """Tests for the auth service."""
 import pytest
 
-from cvapplier.core.exceptions import AuthError
-from cvapplier.services.auth_service import AuthService
+from smartcvapply.core.exceptions import AuthError
+from smartcvapply.services.auth_service import AuthService
 
 
 @pytest.mark.asyncio

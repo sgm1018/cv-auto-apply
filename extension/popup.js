@@ -1,3 +1,13 @@
+// Status helpers
+function setStatus(el, text, kind) {
+  if (!el) return;
+  el.textContent = text;
+  el.className = "muted status-" + (kind || "");
+}
+
+function setStatusOk(el, text) { setStatus(el, text, "ok"); }
+function setStatusErr(el, text) { setStatus(el, text, "err"); }
+
 // Popup state
 const state = {
   authenticated: false,
@@ -5,11 +15,14 @@ const state = {
   settings: null,
   fillSession: null,
   fields: [],
+  configComplete: false,
+  stepsConfig: [],
+  obCvId: null,
 };
 
 // View management
 function showView(name) {
-  for (const v of ["login", "register", "main", "fill", "settings"]) {
+  for (const v of ["login", "register", "onboarding", "main", "fill", "settings"]) {
     const el = document.getElementById("view-" + v);
     if (el) el.classList.toggle("active", v === name);
   }
@@ -49,19 +62,66 @@ function send(msg) {
   });
 }
 
+// ---------- ONBOARDING ----------
+function renderOnboarding() {
+  var allDone = true;
+  var stepNames = ["api_key", "cv", "profile"];
+  for (var i = 0; i < stepNames.length; i++) {
+    var sn = stepNames[i];
+    var step = state.stepsConfig.find(function (s) { return s.name === sn; }) || { name: sn, status: false };
+    var stepDone = step.status === true;
+    if (!stepDone) allDone = false;
+
+    var idx = i + 1;
+    var iconEl = document.getElementById("ob-step" + idx + "-icon");
+    var badgeEl = document.getElementById("ob-step" + idx + "-badge");
+    var bodyEl = document.getElementById("ob-step" + idx + "-body");
+    if (iconEl) {
+      iconEl.className = "ob-step-icon" + (stepDone ? " done" : "");
+      iconEl.textContent = stepDone ? "\u2713" : String(idx);
+    }
+    if (badgeEl) {
+      badgeEl.textContent = stepDone ? "done" : "pending";
+      badgeEl.className = "badge " + (stepDone ? "done" : "skip");
+    }
+    if (bodyEl) bodyEl.classList.toggle("hidden", stepDone);
+  }
+
+  var finishBtn = document.getElementById("ob-finish");
+  var hint = document.getElementById("ob-hint");
+  if (finishBtn) {
+    finishBtn.disabled = !allDone;
+    finishBtn.className = "btn " + (allDone ? "btn-primary" : "btn-primary");
+  }
+  if (hint) {
+    hint.textContent = allDone
+      ? "All steps complete! Click to continue."
+      : "Complete all 3 steps to continue";
+  }
+}
+
 // ---------- BOOTSTRAP ----------
 async function boot() {
   const auth = await send({ type: "AUTH_STATE" });
   if (auth && auth.authenticated) {
     state.authenticated = true;
     state.email = auth.email;
+    state.configComplete = auth.config_complete;
+    state.stepsConfig = auth.steps_config || [];
     await loadSettings();
-    showView("main");
+    if (state.configComplete) {
+      showView("main");
+    } else {
+      showView("onboarding");
+      renderOnboarding();
+    }
+    wireEvents();
+    await maybeTriggerFillFromContent();
   } else {
     showView("login");
+    wireEvents();
+    await maybeTriggerFillFromContent();
   }
-  wireEvents();
-  await maybeTriggerFillFromContent();
 }
 
 async function maybeTriggerFillFromContent() {
@@ -180,13 +240,13 @@ async function loadCVs() {
       headers: { Authorization: "Bearer " + token },
     });
     if (!res.ok) {
-      list.innerHTML = '<p class="muted" style="padding: 12px 0; text-align: center; color:#b91c1c;">Failed to load CVs</p>';
+      list.innerHTML = '<p class="muted status-err" style="padding:12px 0; text-align:center;">Failed to load CVs</p>';
       return;
     }
     const cvs = await res.json();
     renderCVs(cvs);
   } catch (_e) {
-    list.innerHTML = '<p class="muted" style="padding: 12px 0; text-align: center; color:#b91c1c;">Cannot reach server</p>';
+      list.innerHTML = '<p class="muted status-err" style="padding:12px 0; text-align:center;">Cannot reach server</p>';
   }
 }
 
@@ -242,7 +302,7 @@ function renderCVs(cvs) {
           '<div style="display:flex; flex-direction:column; gap:4px; align-items:flex-end;">' +
             parseBtn +
             primaryBtn +
-            '<button class="link-btn" data-action="delete" data-id="' + cv.cv_id + '" style="font-size:12px; color:#b91c1c;">Delete</button>' +
+            '<button class="link-btn danger" data-action="delete" data-id="' + cv.cv_id + '" style="font-size:12px;">Delete</button>' +
           '</div>' +
         '</div>' +
       '</div>'
@@ -284,7 +344,16 @@ function wireEvents() {
         state.authenticated = true;
         state.email = email;
         await loadSettings();
-        showView("main");
+        const auth = await send({ type: "AUTH_STATE" });
+        state.configComplete = auth.config_complete;
+        state.stepsConfig = auth.steps_config || [];
+        if (state.configComplete) {
+          showView("main");
+        } else {
+          showView("onboarding");
+          renderOnboarding();
+        }
+        await maybeTriggerFillFromContent();
         toast("Signed in", "ok");
       } else {
         toast((res && res.error) || "Login failed", "err");
@@ -333,8 +402,16 @@ function wireEvents() {
           await chrome.storage.session.set({ accessToken: data.access_token, refreshToken: data.refresh_token });
           state.authenticated = true;
           state.email = email;
-          await loadSettings();
-          showView("main");
+          const auth = await send({ type: "AUTH_STATE" });
+          state.configComplete = auth.config_complete;
+          state.stepsConfig = auth.steps_config || [];
+          if (state.configComplete) {
+            showView("main");
+          } else {
+            showView("onboarding");
+            renderOnboarding();
+          }
+          await maybeTriggerFillFromContent();
           toast("Account created", "ok");
         } else {
           toast(data.detail || data.message || "Registration failed", "err");
@@ -343,6 +420,166 @@ function wireEvents() {
         toast("Cannot reach server: " + err.message, "err");
       } finally {
         btn.disabled = false;
+      }
+    });
+  }
+
+  // Onboarding: test & save API key
+  const obTestKey = document.getElementById("ob-test-key");
+  if (obTestKey) {
+    obTestKey.addEventListener("click", async function () {
+      const keyEl = document.getElementById("ob-key");
+      const status = document.getElementById("ob-key-status");
+      if (!keyEl || !keyEl.value) {
+        setStatusErr(status, "Enter an API key first");
+        return;
+      }
+      setStatus(status, "Testing...");
+      const token = await getToken();
+      try {
+        const testRes = await fetch("http://localhost:8000/api/v1/settings/llm/test", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+          body: JSON.stringify({ api_key: keyEl.value }),
+        });
+        const testData = await testRes.json();
+        if (testData.ok) {
+          // Save the key
+          const saveRes = await fetch("http://localhost:8000/api/v1/settings", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+            body: JSON.stringify({ llm_api_key: keyEl.value }),
+          });
+          if (saveRes.ok) {
+            setStatusOk(status, "\u2713 API key saved and verified");
+            keyEl.value = "";
+            state.stepsConfig = state.stepsConfig.map(function (s) {
+              if (s.name === "api_key") s.status = true;
+              return s;
+            });
+            renderOnboarding();
+          } else {
+            setStatusErr(status, "\u2717 Failed to save API key");
+          }
+        } else {
+          setStatusErr(status, "\u2717 " + (testData.message || "Connection failed"));
+        }
+      } catch (_e) {
+        setStatusErr(status, "\u2717 Cannot reach server");
+      }
+    });
+  }
+
+  // Onboarding: upload CV
+  const obUploadCv = document.getElementById("ob-upload-cv");
+  if (obUploadCv) {
+    obUploadCv.addEventListener("click", async function () {
+      const fileInput = document.getElementById("ob-cv-file");
+      const status = document.getElementById("ob-cv-status");
+      if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        setStatusErr(status, "Pick a file first");
+        return;
+      }
+      const file = fileInput.files[0];
+      setStatus(status, "Uploading...");
+      const token = await getToken();
+      try {
+        const form = new FormData();
+        form.append("file", file);
+        const uploadRes = await fetch("http://localhost:8000/api/v1/cvs", {
+          method: "POST",
+          headers: { Authorization: "Bearer " + token },
+          body: form,
+        });
+        if (!uploadRes.ok) {
+          setStatusErr(status, "\u2717 Upload failed");
+          return;
+        }
+        const uploadData = await uploadRes.json();
+        state.obCvId = uploadData.cv_id;
+        setStatus(status, "\u2713 Uploaded, parsing...");
+        // Trigger parse
+        const parseRes = await fetch("http://localhost:8000/api/v1/cvs/" + uploadData.cv_id + "/parse", {
+          method: "POST",
+          headers: { Authorization: "Bearer " + token },
+        });
+        const parseData = await parseRes.json();
+        if (parseData.parse_status === "done") {
+          setStatusOk(status, "\u2713 CV parsed successfully");
+          fileInput.value = "";
+          state.stepsConfig = state.stepsConfig.map(function (s) {
+            if (s.name === "cv") s.status = true;
+            return s;
+          });
+          renderOnboarding();
+        } else if (parseData.parse_status === "failed") {
+          var errMsg = parseData.parse_error || "Parse failed";
+          if (errMsg.indexOf("Authentication") >= 0 || errMsg.indexOf("InvalidKey") >= 0) {
+            errMsg = "Missing or invalid API key";
+          }
+          setStatusErr(status, "\u2717 " + errMsg);
+        } else {
+          setStatus(status, "\u2713 Uploaded, parsing in background...");
+          // Poll until done
+          var pollCvId = uploadData.cv_id;
+          pollLoop(pollCvId, token, status);
+        }
+      } catch (e) {
+        setStatusErr(status, "\u2717 " + e.message);
+      }
+    });
+  }
+
+  async function pollLoop(cvId, token, statusEl) {
+    for (var i = 0; i < 30; i++) {
+      await new Promise(function (r) { setTimeout(r, 2000); });
+      try {
+        var res = await fetch("http://localhost:8000/api/v1/cvs/" + cvId, {
+          headers: { Authorization: "Bearer " + token },
+        });
+        if (!res.ok) continue;
+        var data = await res.json();
+        if (data.parse_status === "done") {
+          setStatusOk(statusEl, "\u2713 CV parsed successfully");
+          var fileInput = document.getElementById("ob-cv-file");
+          if (fileInput) fileInput.value = "";
+          state.stepsConfig = state.stepsConfig.map(function (s) {
+            if (s.name === "cv") s.status = true;
+            return s;
+          });
+          renderOnboarding();
+          return;
+        } else if (data.parse_status === "failed") {
+          setStatusErr(statusEl, "\u2717 " + (data.parse_error || "Parse failed"));
+          return;
+        }
+      } catch (_e) { /* retry */ }
+    }
+    setStatusErr(statusEl, "\u2717 Parse timed out, retry later");
+  }
+
+  // Onboarding: go to profile
+  const obGoProfile = document.getElementById("ob-go-profile");
+  if (obGoProfile) {
+    obGoProfile.addEventListener("click", function () {
+      showView("settings");
+      activateTab("profile");
+    });
+  }
+
+  // Onboarding: finish
+  const obFinish = document.getElementById("ob-finish");
+  if (obFinish) {
+    obFinish.addEventListener("click", async function () {
+      // Re-fetch to confirm all steps really complete
+      const auth = await send({ type: "AUTH_STATE" });
+      state.configComplete = auth.config_complete;
+      state.stepsConfig = auth.steps_config || [];
+      if (state.configComplete) {
+        showView("main");
+      } else {
+        renderOnboarding();
+        toast("Some steps are still incomplete", "err");
       }
     });
   }
@@ -543,11 +780,9 @@ function wireEvents() {
           body: JSON.stringify(body),
         });
         const data = await res.json();
-        out.textContent = data.ok ? "\u2713 " + data.message : "\u2717 " + data.message;
-        out.style.color = data.ok ? "#047857" : "#b91c1c";
+        setStatus(out, data.ok ? "\u2713 " + data.message : "\u2717 " + data.message, data.ok ? "ok" : "err");
       } catch (_e) {
-        out.textContent = "\u2717 Cannot reach server";
-        out.style.color = "#b91c1c";
+        setStatusErr(out, "\u2717 Cannot reach server");
       }
     });
   }
@@ -559,15 +794,13 @@ function wireEvents() {
       const fileInput = document.getElementById("cv-file-input");
       const status = document.getElementById("cv-upload-status");
       if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-        status.textContent = "Pick a file first";
-        status.style.color = "#b91c1c";
+        setStatusErr(status, "Pick a file first");
         return;
       }
       const file = fileInput.files[0];
       const btn = cvUploadBtn;
       btn.disabled = true;
-      status.textContent = "Uploading...";
-      status.style.color = "";
+      setStatus(status, "Uploading...");
       try {
         const token = await getToken();
         const form = new FormData();
@@ -579,8 +812,7 @@ function wireEvents() {
         });
         if (res.ok) {
           const data = await res.json();
-          status.textContent = "\u2713 " + file.name + " uploaded";
-          status.style.color = "#047857";
+          setStatusOk(status, "\u2713 " + file.name + " uploaded");
           fileInput.value = "";
           await loadCVs();
           // Auto-parse if this is the first CV
@@ -598,12 +830,10 @@ function wireEvents() {
           }
         } else {
           const body = await res.json().catch(function () { return {}; });
-          status.textContent = "\u2717 " + (body.detail || "Upload failed");
-          status.style.color = "#b91c1c";
+          setStatusErr(status, "\u2717 " + (body.detail || "Upload failed"));
         }
       } catch (e) {
-        status.textContent = "\u2717 " + e.message;
-        status.style.color = "#b91c1c";
+        setStatusErr(status, "\u2717 " + e.message);
       } finally {
         btn.disabled = false;
       }
@@ -768,6 +998,12 @@ async function saveLLMSettings() {
       applySettingsToUI();
       if (keyEl) keyEl.value = "";
       flashStatus("Saved", "ok");
+      // Re-check onboarding after API key save
+      var ac = await send({ type: "AUTH_STATE" });
+      state.configComplete = ac.config_complete;
+      state.stepsConfig = ac.steps_config || [];
+      var ov = document.getElementById("view-onboarding");
+      if (ov && ov.classList.contains("active")) renderOnboarding();
     } else {
       const body = await res.json().catch(function () { return {}; });
       flashStatus(body.message || "Save failed", "err");
@@ -941,24 +1177,35 @@ async function saveProfile() {
       body: JSON.stringify(body),
     });
     if (res.ok) {
-      if (statusEl) { statusEl.textContent = "\u2713 Profile saved"; statusEl.style.color = "#047857"; }
+      if (statusEl) { setStatusOk(statusEl, "\u2713 Profile saved"); }
+      // Re-check onboarding config after profile update
+      var authCheck = await send({ type: "AUTH_STATE" });
+      state.configComplete = authCheck.config_complete;
+      state.stepsConfig = authCheck.steps_config || [];
+      if (state.configComplete) {
+        // If we're on onboarding view, auto-navigate to main
+        var onboardingView = document.getElementById("view-onboarding");
+        if (onboardingView && onboardingView.classList.contains("active")) {
+          showView("main");
+          toast("Onboarding complete!", "ok");
+        }
+      }
     } else {
       var data = await res.json().catch(function () { return {}; });
-      if (statusEl) { statusEl.textContent = "\u2717 " + (data.message || "Save failed"); statusEl.style.color = "#b91c1c"; }
+      if (statusEl) { setStatusErr(statusEl, "\u2717 " + (data.message || "Save failed")); }
     }
   } catch (_e) {
-    if (statusEl) { statusEl.textContent = "\u2717 Cannot reach server"; statusEl.style.color = "#b91c1c"; }
+    if (statusEl) { setStatusErr(statusEl, "\u2717 Cannot reach server"); }
   }
 }
 
 function flashStatus(text, kind) {
   const el = document.getElementById("settings-status");
   if (!el) return;
-  el.textContent = text;
-  el.style.color = kind === "ok" ? "#047857" : "#b91c1c";
+  setStatus(el, text, kind);
   setTimeout(function () {
     el.textContent = "Saved";
-    el.style.color = "";
+    el.className = "muted text-sm";
   }, 2000);
 }
 

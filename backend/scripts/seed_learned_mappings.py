@@ -1,10 +1,10 @@
 """Seed curated learned_mappings catalog for cold start."""
 import asyncio
 
-from cvapplier.core.db import create_mongo_client, init_beanie
-from cvapplier.core.logging import configure_logging
-from cvapplier.models.learned_mapping import LearnedMapping
-from cvapplier.repositories.learned_mapping_repository import LearnedMappingRepository
+from smartcvapply.core.db import create_mongo_client, init_beanie
+from smartcvapply.core.logging import configure_logging
+from smartcvapply.models.learned_mapping import LearnedMapping
+from smartcvapply.repositories.learned_mapping_repository import LearnedMappingRepository
 
 CATALOG: list[tuple[str, str, str, str]] = [
     # (signature, language, target_path, transform)

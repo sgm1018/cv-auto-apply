@@ -1,6 +1,6 @@
-# CVApplier Backend
+# SmartCVapply Backend
 
-FastAPI + MongoDB + S3 + LiteLLM backend for the CVApplier Chrome extension.
+FastAPI + MongoDB + S3 + LiteLLM backend for the SmartCVapply Chrome extension.
 
 ## Quick start
 
@@ -24,7 +24,7 @@ docker run -d --name cv-minio -p 9000:9000 -p 9001:9001 \
   minio/minio server /data --console-address :9001
 
 # 5. Run the API
-uvicorn cvapplier.main:app --reload --port 8000
+uvicorn smartcvapply.main:app --reload --port 8000
 
 # 6. (Optional) Seed the learned_mappings catalog
 python -m scripts.seed_learned_mappings
@@ -33,7 +33,7 @@ python -m scripts.seed_learned_mappings
 ## Layout
 
 ```
-src/cvapplier/
+src/smartcvapply/
   core/          # config, security, db, storage, exceptions, logging, rate limit, deps
   models/        # Beanie Documents (User, Profile, CV, LearnedMapping, FillSession, FeedbackEvent)
   schemas/       # Pydantic DTOs, one per file

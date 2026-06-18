@@ -1,7 +1,7 @@
 """Tests for the core utility services."""
 import pytest
 
-from cvapplier.services.encryption import (
+from smartcvapply.services.encryption import (
     decrypt_api_key,
     decrypt_cv_bytes,
     derive_cv_key,

@@ -5,7 +5,7 @@ import respx
 from httpx import Response
 from fastapi.testclient import TestClient
 
-from cvapplier.main import create_app
+from smartcvapply.main import create_app
 
 
 @pytest.fixture

@@ -151,7 +151,10 @@ chrome.runtime.onMessage.addListener((msg: Message, _sender, sendResponse) => {
             return;
           }
           try {
-            const me = await apiFetch<{ user_id: string; email: string; language: string }>("/api/v1/auth/me");
+            const me = await apiFetch<{
+              user_id: string; email: string; language: string;
+              config_complete: boolean; steps_config: Array<{ name: string; status: boolean }>;
+            }>("/api/v1/auth/me");
             sendResponse({ authenticated: true, ...me });
           } catch {
             sendResponse({ authenticated: false });
@@ -220,5 +223,5 @@ chrome.runtime.onMessage.addListener((msg: Message, _sender, sendResponse) => {
 });
 
 chrome.runtime.onInstalled.addListener(() => {
-  console.log("[CVApplier] extension installed");
+  console.log("[SmartCVapply] extension installed");
 });

@@ -1,9 +1,9 @@
 """Tests for the settings service (encrypted API key handling)."""
 import pytest
 
-from cvapplier.core.exceptions import ValidationFailed
-from cvapplier.repositories.user_repository import UserRepository
-from cvapplier.services.settings_service import SettingsService
+from smartcvapply.core.exceptions import ValidationFailed
+from smartcvapply.repositories.user_repository import UserRepository
+from smartcvapply.services.settings_service import SettingsService
 
 
 @pytest.mark.asyncio

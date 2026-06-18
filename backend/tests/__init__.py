@@ -1,1 +1,1 @@
-"""Test suite for CVApplier backend."""
+"""Test suite for SmartCVapply backend."""

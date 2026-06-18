@@ -2,7 +2,7 @@
 import type { ExtractedField, FieldValue } from "./types.js";
 
 const API_BASE = "http://localhost:8000";
-const BANNER_ID = "__cvapplier_banner__";
+const BANNER_ID = "__smartcvapply_banner__";
 
 interface FormDetection {
   form: HTMLElement;
@@ -27,21 +27,21 @@ function detectForms(): FormDetection[] {
 
   // Strategy 1: native <form> elements
   for (const form of document.querySelectorAll<HTMLFormElement>("form")) {
-    if (form.dataset.cvapplierSeen) continue;
+    if (form.dataset.smartcvapplySeen) continue;
     const fields = extractFields(form);
     if (shouldSuggest(fields)) {
-      form.dataset.cvapplierSeen = "1";
+      form.dataset.smartcvapplySeen = "1";
       out.push({ form, fields, detectedAt: Date.now() });
     }
   }
 
   // Strategy 2: SPA containers that look like forms (no <form> tag)
   for (const container of findFormContainers()) {
-    if (container.dataset.cvapplierSeen) continue;
+    if (container.dataset.smartcvapplySeen) continue;
     if (container.tagName === "FORM") continue; // already handled above
     const fields = extractFields(container);
     if (shouldSuggest(fields)) {
-      container.dataset.cvapplierSeen = "1";
+      container.dataset.smartcvapplySeen = "1";
       out.push({ form: container, fields, detectedAt: Date.now() });
     }
   }
@@ -242,7 +242,7 @@ function showBanner(_form: HTMLElement) {
     <div class="card">
       <div class="icon">CV</div>
       <div class="text">
-        <div class="title">CVApplier ready</div>
+        <div class="title">SmartCVapply ready</div>
         <div class="sub">Form detected — review and apply in one click</div>
       </div>
       <button class="primary" id="apply">Review & Apply</button>

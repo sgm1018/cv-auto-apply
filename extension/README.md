@@ -1,4 +1,4 @@
-# CVApplier Chrome Extension
+# SmartCVapply Chrome Extension
 
 Manifest V3 extension that detects job application forms on any page and pre-fills them with the user's stored profile.
 

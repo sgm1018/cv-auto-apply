@@ -61,6 +61,11 @@ export interface FieldValue {
   confidence: number;
 }
 
+export interface StepConfig {
+  name: string;
+  status: boolean;
+}
+
 export type Message =
   | { type: "AUTH_LOGIN"; email: string; password: string }
   | { type: "AUTH_LOGOUT" }

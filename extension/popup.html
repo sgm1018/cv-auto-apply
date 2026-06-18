@@ -3,83 +3,79 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CVApplier</title>
+  <title>SmartCVapply</title>
   <link rel="icon" type="image/x-icon" href="favicon.ico" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
     /* ------------------------------------------------------------------
-       CVApplier popup — epic-design system in blue
-       6 depth layers, GPU-only animations, reduced-motion safe
+       SmartCVapply — modern minimal design system
+       Neutral palette, clean typography, WCAG AA contrast
        ------------------------------------------------------------------ */
     :root {
-      --blue-50:  #eff6ff;
-      --blue-100: #dbeafe;
-      --blue-200: #bfdbfe;
-      --blue-300: #93c5fd;
-      --blue-400: #60a5fa;
-      --blue-500: #3b82f6;
-      --blue-600: #2563eb;
-      --blue-700: #1d4ed8;
-      --blue-800: #1e40af;
-      --blue-900: #1e3a8a;
-      --blue-950: #172554;
+      --bg:         #ffffff;
+      --surface:    #f6f7f9;
+      --surface-alt:#eef0f3;
+      --border:     #e2e5ea;
+      --border-accent: #c4cad4;
 
-      --ink-900: #0b1220;
-      --ink-800: #111827;
-      --ink-700: #1f2937;
-      --ink-500: #6b7280;
-      --ink-300: #d1d5db;
-      --ink-100: #f3f4f6;
-      --ink-50:  #f9fafb;
-      --white:   #ffffff;
+      --text:       #0f1419;
+      --text-soft:  #3a4754;
+      --text-muted: #6b7885;
+      --text-faint: #9ba6b0;
 
-      --radius: 14px;
-      --radius-sm: 8px;
-      --shadow-1: 0 2px 8px rgba(15, 23, 42, 0.04);
-      --shadow-2: 0 12px 32px rgba(37, 99, 235, 0.18);
-      --shadow-3: 0 24px 64px rgba(30, 64, 175, 0.32);
+      --accent:     #3b5fe7;
+      --accent-hover:#2f4fce;
+      --accent-soft: #eceffd;
+      --accent-border:#d0d8f9;
 
-      --easing: cubic-bezier(0.16, 1, 0.3, 1);
+      --success:    #0f9d58;
+      --success-bg: #e6f7ee;
+      --error:      #d93025;
+      --error-bg:   #fce8e6;
+      --warn:       #e37400;
+      --warn-bg:    #fef3d2;
+
+      --radius: 10px;
+      --radius-sm: 6px;
+      --radius-pill: 999px;
+
+      --shadow-sm:  0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md:  0 4px 12px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.02);
+      --shadow-lg:  0 8px 30px rgba(0,0,0,0.08);
+
+      --ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      --ease-out: cubic-bezier(0, 0, 0.2, 1);
     }
 
     * { box-sizing: border-box; }
-    html { margin: 0; padding: 0; border-radius: 14px; overflow: hidden; }
-    body { margin: 0; padding: 0; }
+    html { margin: 0; padding: 0; border-radius: var(--radius); overflow: hidden; background: var(--bg); }
 
     body {
       width: 420px;
       height: 100dvh;
       margin: 0;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      color: var(--ink-900);
-      background: var(--white);
+      font-size: 14px;
+      color: var(--text);
+      background: var(--bg);
       overflow-y: auto;
       overflow-x: hidden;
-      font-size: 14px;
       -webkit-font-smoothing: antialiased;
       display: flex;
       flex-direction: column;
+      line-height: 1.5;
     }
 
-    /* custom scrollbar */
-    body::-webkit-scrollbar {
-      width: 6px;
-    }
-    body::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    body::-webkit-scrollbar-thumb {
-      background: var(--blue-200);
-      border-radius: 3px;
-    }
-    body::-webkit-scrollbar-thumb:hover {
-      background: var(--blue-400);
-    }
+    /* custom scrollbar — minimal */
+    body::-webkit-scrollbar { width: 4px; }
+    body::-webkit-scrollbar-track { background: transparent; }
+    body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    body::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
 
     /* ------------------------------------------------------------------
-       Stage: 6-layer depth scene for each view
+       Scene: subtle background layers
        ------------------------------------------------------------------ */
     .scene {
       position: relative;
@@ -90,74 +86,36 @@
       flex-direction: column;
     }
 
-    /* depth-0: deep blue gradient backdrop */
     .layer-depth-0 {
       position: absolute; inset: 0; z-index: 0;
       background:
-        radial-gradient(ellipse 80% 60% at 20% 0%, rgba(96, 165, 250, 0.35), transparent 60%),
-        radial-gradient(ellipse 90% 60% at 100% 100%, rgba(30, 64, 175, 0.25), transparent 60%),
-        linear-gradient(180deg, #f0f7ff 0%, #ffffff 40%, #ffffff 100%);
+        radial-gradient(ellipse 70% 50% at 20% 0%, rgba(59, 95, 231, 0.06), transparent 60%),
+        radial-gradient(ellipse 80% 50% at 100% 100%, rgba(59, 95, 231, 0.04), transparent 60%),
+        var(--bg);
     }
 
-    /* depth-1: ambient blobs */
     .layer-depth-1 {
       position: absolute; inset: 0; z-index: 1;
       pointer-events: none;
-    }
-    .blob {
-      position: absolute; border-radius: 50%;
-      filter: blur(40px);
-      opacity: 0.55;
-      animation: drift 18s ease-in-out infinite;
-    }
-    .blob.b1 { width: 180px; height: 180px; background: #60a5fa; top: -50px; right: -40px; }
-    .blob.b2 { width: 140px; height: 140px; background: #2563eb; bottom: -30px; left: -20px; animation-delay: -6s; }
-    .blob.b3 { width: 80px;  height: 80px;  background: #3b82f6; top: 40%; left: 50%; animation-delay: -12s; opacity: 0.3; }
-
-    @keyframes drift {
-      0%, 100% { transform: translate(0, 0) scale(1); }
-      50% { transform: translate(20px, -10px) scale(1.08); }
+      opacity: 0.4;
     }
 
-    /* depth-2: subtle grid */
     .layer-depth-2 {
       position: absolute; inset: 0; z-index: 2;
       background-image:
-        linear-gradient(rgba(37, 99, 235, 0.05) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(37, 99, 235, 0.05) 1px, transparent 1px);
-      background-size: 32px 32px;
+        linear-gradient(rgba(59, 95, 231, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59, 95, 231, 0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
       mask-image: radial-gradient(ellipse at 50% 0%, black 0%, transparent 70%);
       pointer-events: none;
     }
 
-    /* depth-3: hero content area */
     .content {
       position: relative; z-index: 3;
-      padding: 28px 22px 22px;
+      padding: 24px 20px 20px;
       flex: 1;
       display: flex;
       flex-direction: column;
-    }
-
-    /* depth-5: foreground sparkles */
-    .layer-depth-5 {
-      position: absolute; inset: 0; z-index: 5;
-      pointer-events: none;
-    }
-    .spark {
-      position: absolute;
-      width: 4px; height: 4px; border-radius: 50%;
-      background: var(--blue-400);
-      opacity: 0.6;
-      animation: twinkle 4s ease-in-out infinite;
-    }
-    .spark.s1 { top: 12%; right: 10%; animation-delay: 0s; }
-    .spark.s2 { top: 35%; right: 18%; animation-delay: -1.5s; }
-    .spark.s3 { top: 60%; right: 8%;  animation-delay: -3s; }
-
-    @keyframes twinkle {
-      0%, 100% { opacity: 0.2; transform: scale(0.8); }
-      50% { opacity: 0.9; transform: scale(1.4); }
     }
 
     /* ------------------------------------------------------------------
@@ -165,156 +123,258 @@
        ------------------------------------------------------------------ */
     .brand {
       display: flex; align-items: center; gap: 10px;
-      margin-bottom: 24px;
+      margin-bottom: 22px;
     }
-    .brand-mark {
-      width: 36px; height: 36px; border-radius: 10px;
-      background: linear-gradient(135deg, var(--blue-500) 0%, var(--blue-800) 100%);
-      display: flex; align-items: center; justify-content: center;
-      color: white; font-weight: 800; font-size: 14px;
-      box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
-      letter-spacing: -0.5px;
+    .brand-logo {
+      width: 34px; height: 34px; border-radius: 8px;
+      flex-shrink: 0;
     }
     .brand-name {
-      font-size: 16px; font-weight: 700; letter-spacing: -0.4px;
-      color: var(--ink-900);
+      font-size: 15px; font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.3px;
     }
     .brand-sub {
-      font-size: 11px; color: var(--ink-500); margin-top: 1px;
-      letter-spacing: 0.2px;
+      font-size: 11px; color: var(--text-muted);
+      margin-top: 1px;
     }
 
     /* ------------------------------------------------------------------
        Typography
        ------------------------------------------------------------------ */
-    h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.6px; margin: 0 0 6px; line-height: 1.15; }
-    h2 { font-size: 15px; font-weight: 700; letter-spacing: -0.2px; margin: 18px 0 8px; }
-    p  { margin: 0 0 12px; color: var(--ink-700); line-height: 1.45; }
-    .muted { color: var(--ink-500); font-size: 12px; }
-    .label { display: block; font-size: 11px; font-weight: 600; color: var(--ink-700); margin: 0 0 6px; letter-spacing: 0.3px; text-transform: uppercase; }
+    h1 {
+      font-size: 20px; font-weight: 700;
+      letter-spacing: -0.4px;
+      margin: 0 0 4px;
+      line-height: 1.2;
+      color: var(--text);
+    }
+    h2 {
+      font-size: 14px; font-weight: 600;
+      letter-spacing: -0.2px;
+      margin: 16px 0 6px;
+      color: var(--text);
+    }
+    p { margin: 0 0 10px; color: var(--text-soft); line-height: 1.5; }
+    .muted { color: var(--text-muted); font-size: 12px; }
+    .label {
+      display: block;
+      font-size: 11px; font-weight: 600;
+      color: var(--text-soft);
+      margin: 0 0 5px;
+    }
 
     /* ------------------------------------------------------------------
-       Form
+       Inputs
        ------------------------------------------------------------------ */
-    .field { margin-bottom: 12px; }
+    .field { margin-bottom: 10px; }
     .input {
       width: 100%;
-      padding: 11px 14px;
-      font-size: 14px;
+      padding: 10px 12px;
+      font-size: 13px;
       font-family: inherit;
-      color: var(--ink-900);
-      background: var(--white);
-      border: 1.5px solid var(--ink-100);
+      color: var(--text);
+      background: var(--bg);
+      border: 1.5px solid var(--border);
       border-radius: var(--radius-sm);
-      transition: border-color 0.2s var(--easing), box-shadow 0.2s var(--easing);
+      transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
       outline: none;
     }
     .input:focus {
-      border-color: var(--blue-500);
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(59, 95, 231, 0.12);
     }
-    .input::placeholder { color: var(--ink-300); }
-    select.input { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%236b7280' d='M6 8 0 0h12z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+    .input::placeholder { color: var(--text-faint); }
+    select.input {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%236b7885' d='M6 8 0 0h12z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 30px;
+    }
+    textarea.input { resize: vertical; min-height: 60px; }
 
     /* ------------------------------------------------------------------
        Buttons
        ------------------------------------------------------------------ */
     .btn {
-      display: flex; align-items: center; justify-content: center; gap: 8px;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
       width: 100%;
-      padding: 12px 16px;
-      font-size: 14px; font-weight: 600; font-family: inherit;
+      padding: 10px 14px;
+      font-size: 13px; font-weight: 600; font-family: inherit;
       border-radius: var(--radius-sm);
       border: none;
       cursor: pointer;
-      transition: transform 0.18s var(--easing), box-shadow 0.18s var(--easing), background 0.18s var(--easing);
+      transition: background 0.15s var(--ease), box-shadow 0.15s var(--ease), transform 0.1s var(--ease);
     }
     .btn:active { transform: translateY(1px); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
     .btn-primary {
-      background: linear-gradient(135deg, var(--blue-500) 0%, var(--blue-700) 100%);
-      color: white;
-      box-shadow: 0 8px 24px rgba(37, 99, 235, 0.35), 0 2px 4px rgba(0,0,0,0.06);
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 6px rgba(59, 95, 231, 0.3);
     }
-    .btn-primary:hover { box-shadow: 0 12px 32px rgba(37, 99, 235, 0.45), 0 2px 4px rgba(0,0,0,0.08); transform: translateY(-1px); }
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-hover);
+      box-shadow: 0 4px 12px rgba(59, 95, 231, 0.35);
+    }
+
     .btn-ghost {
       background: transparent;
-      color: var(--blue-700);
-      border: 1.5px solid var(--ink-100);
+      color: var(--text-soft);
+      border: 1.5px solid var(--border);
     }
-    .btn-ghost:hover { background: var(--blue-50); border-color: var(--blue-200); }
+    .btn-ghost:hover:not(:disabled) {
+      background: var(--surface);
+      border-color: var(--border-accent);
+    }
+
     .btn-danger {
       background: transparent;
-      color: #b91c1c;
-      border: 1.5px solid #fecaca;
+      color: var(--error);
+      border: 1.5px solid var(--error);
     }
-    .btn-danger:hover { background: #fef2f2; }
+    .btn-danger:hover:not(:disabled) {
+      background: var(--error-bg);
+    }
+
+    .btn-sm {
+      padding: 6px 10px;
+      font-size: 12px;
+    }
+
+    .btn-icon {
+      width: 32px; height: 32px; padding: 0;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: background 0.15s var(--ease), color 0.15s var(--ease);
+    }
+    .btn-icon:hover { background: var(--surface); color: var(--text); }
+
+    .link-btn {
+      background: none; border: none;
+      color: var(--accent); cursor: pointer;
+      font: inherit; padding: 0;
+      transition: color 0.15s var(--ease);
+    }
+    .link-btn:hover { color: var(--accent-hover); }
+    .link-btn.danger { color: var(--error); }
+    .link-btn.danger:hover { color: #b3261e; }
+
+    /* header action buttons — back & settings */
+    .header-btn {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 5px 10px;
+      font-size: 12px; font-weight: 500;
+      color: var(--text-muted);
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background 0.15s var(--ease), border-color 0.15s var(--ease), color 0.15s var(--ease);
+      font-family: inherit;
+    }
+    .header-btn:hover {
+      background: var(--surface);
+      border-color: var(--border);
+      color: var(--text);
+    }
+    .header-btn:active {
+      background: var(--surface-alt);
+    }
 
     /* ------------------------------------------------------------------
        Status pill
        ------------------------------------------------------------------ */
     .pill {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 4px 10px;
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 8px;
       font-size: 11px; font-weight: 600;
-      border-radius: 999px;
-      background: var(--blue-50);
-      color: var(--blue-800);
-      letter-spacing: 0.2px;
+      border-radius: var(--radius-pill);
+      color: var(--text-soft);
+      background: var(--surface);
     }
-    .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--blue-500); box-shadow: 0 0 0 4px rgba(59,130,246,0.2); animation: pulse 2s ease-in-out infinite; }
-    @keyframes pulse {
-      0%, 100% { box-shadow: 0 0 0 4px rgba(59,130,246,0.2); }
-      50% { box-shadow: 0 0 0 6px rgba(59,130,246,0.05); }
+    .pill .dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--accent);
+      animation: pillPulse 2s ease-in-out infinite;
     }
-    .pill.ok { background: #ecfdf5; color: #047857; }
-    .pill.ok .dot { background: #10b981; box-shadow: 0 0 0 4px rgba(16,185,129,0.2); }
-    .pill.err { background: #fef2f2; color: #b91c1c; }
-    .pill.err .dot { background: #ef4444; box-shadow: 0 0 0 4px rgba(239,68,68,0.2); }
+    @keyframes pillPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .pill.ok { background: var(--success-bg); color: var(--success); }
+    .pill.ok .dot { background: var(--success); }
+    .pill.err { background: var(--error-bg); color: var(--error); }
+    .pill.err .dot { background: var(--error); }
 
     /* ------------------------------------------------------------------
        Cards
        ------------------------------------------------------------------ */
     .card {
-      background: rgba(255, 255, 255, 0.85);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.6);
+      background: var(--bg);
+      border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 16px;
-      box-shadow: var(--shadow-1);
+      padding: 14px;
+      transition: box-shadow 0.2s var(--ease);
     }
+    .card:hover { box-shadow: var(--shadow-sm); }
     .card + .card { margin-top: 10px; }
 
-    /* compact field inside cards */
-    .cf-row { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; }
+    /* Compact form rows inside cards */
+    .cf-row {
+      display: flex; gap: 6px;
+      align-items: center;
+      margin-bottom: 4px;
+    }
     .cf-row:last-child { margin-bottom: 0; }
     .cf-input {
       flex: 1;
-      padding: 5px 8px;
+      padding: 5px 7px;
       font-size: 12px;
       font-family: inherit;
-      color: var(--ink-900);
-      background: var(--white);
-      border: 1px solid var(--ink-100);
-      border-radius: 6px;
+      color: var(--text);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
       outline: none;
       min-width: 0;
     }
-    .cf-input:focus { border-color: var(--blue-500); box-shadow: 0 0 0 2px rgba(59,130,246,0.1); }
-    .cf-label { font-size: 10px; font-weight: 600; color: var(--ink-500); flex-shrink: 0; width: 48px; text-align: right; }
-    .cf-del {
-      background: none; border: none; color: #b91c1c; cursor: pointer;
-      font-size: 16px; padding: 0 4px; line-height: 1; flex-shrink: 0;
+    .cf-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(59,95,231,0.1); }
+    .cf-label {
+      font-size: 10px; font-weight: 600;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      width: 52px;
+      text-align: right;
     }
-    .cf-del:hover { color: #dc2626; }
+    .cf-del {
+      background: none; border: none;
+      color: var(--error); cursor: pointer;
+      font-size: 15px; padding: 0 4px;
+      line-height: 1; flex-shrink: 0;
+      border-radius: 4px;
+      transition: background 0.15s var(--ease);
+    }
+    .cf-del:hover { background: var(--error-bg); }
 
     /* ------------------------------------------------------------------
        View transitions
        ------------------------------------------------------------------ */
-    .view { display: none; animation: viewIn 0.45s var(--easing); }
-    .view.active { display: flex; flex-direction: column; flex: 1; }
+    .view { display: none; }
+    .view.active {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      animation: viewIn 0.3s var(--ease-out);
+    }
     @keyframes viewIn {
-      from { opacity: 0; transform: translateY(8px); }
+      from { opacity: 0; transform: translateY(6px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
@@ -322,174 +382,197 @@
        Tabs (Settings)
        ------------------------------------------------------------------ */
     .tabs {
-      display: flex; gap: 4px;
-      background: var(--ink-100);
-      border-radius: 10px;
-      padding: 4px;
-      margin-bottom: 14px;
+      display: flex; gap: 2px;
+      background: var(--surface);
+      border-radius: var(--radius-sm);
+      padding: 3px;
+      margin-bottom: 12px;
     }
     .tab {
       flex: 1;
-      padding: 7px 10px;
+      padding: 6px 8px;
       text-align: center;
-      font-size: 12px; font-weight: 600;
-      border-radius: 7px;
+      font-size: 12px; font-weight: 500;
+      border-radius: 4px;
       cursor: pointer;
-      color: var(--ink-500);
-      transition: background 0.18s var(--easing), color 0.18s var(--easing);
+      color: var(--text-muted);
+      transition: background 0.15s var(--ease), color 0.15s var(--ease);
     }
     .tab.active {
-      background: var(--white);
-      color: var(--ink-900);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      background: var(--bg);
+      color: var(--text);
+      box-shadow: var(--shadow-sm);
+      font-weight: 600;
     }
-    .tab-panel { display: block; flex: 1; overflow-y: auto; }
+    .tab-panel { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow-y: auto; }
 
     /* ------------------------------------------------------------------
-       Fill view progress
+       Fill view
        ------------------------------------------------------------------ */
     .progress-bar {
       position: relative;
-      height: 6px;
-      background: var(--ink-100);
-      border-radius: 3px;
+      height: 4px;
+      background: var(--surface);
+      border-radius: 2px;
       overflow: hidden;
-      margin: 8px 0 12px;
+      margin: 8px 0 10px;
     }
     .progress-fill {
       position: absolute; top: 0; left: 0; bottom: 0;
-      background: linear-gradient(90deg, var(--blue-500), var(--blue-700));
+      background: var(--accent);
       width: 0%;
-      transition: width 0.4s var(--easing);
+      transition: width 0.35s var(--ease-out);
     }
     .field-row {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 8px 0;
-      border-bottom: 1px solid var(--ink-100);
+      padding: 6px 0;
+      border-bottom: 1px solid var(--surface);
       font-size: 13px;
     }
     .field-row:last-child { border-bottom: none; }
-    .field-row .name { color: var(--ink-700); flex: 1; }
+    .field-row .name { color: var(--text-soft); flex: 1; }
+
     .badge {
-      display: inline-flex; align-items: center; gap: 4px;
+      display: inline-flex; align-items: center;
       font-size: 10px; font-weight: 600;
-      padding: 3px 8px;
-      border-radius: 999px;
-      letter-spacing: 0.3px;
+      padding: 2px 7px;
+      border-radius: var(--radius-pill);
     }
-    .badge.learned { background: #eff6ff; color: var(--blue-800); }
-    .badge.local   { background: #ecfdf5; color: #047857; }
-    .badge.llm     { background: #fef3c7; color: #92400e; }
-    .badge.skip    { background: var(--ink-100); color: var(--ink-500); }
-    .badge.err     { background: #fef2f2; color: #b91c1c; }
+    .badge.learned { background: var(--accent-soft); color: var(--accent); }
+    .badge.local   { background: var(--success-bg); color: var(--success); }
+    .badge.llm     { background: var(--warn-bg); color: var(--warn); }
+    .badge.skip    { background: var(--surface); color: var(--text-muted); }
+    .badge.done    { background: var(--success-bg); color: var(--success); }
+    .badge.err     { background: var(--error-bg); color: var(--error); }
+    .badge.ok      { background: var(--success-bg); color: var(--success); }
 
     /* ------------------------------------------------------------------
        Footer
        ------------------------------------------------------------------ */
     .footer {
-      padding: 10px 18px;
+      padding: 8px 18px;
       display: flex; justify-content: space-between; align-items: center;
       font-size: 11px;
-      color: var(--ink-500);
-      border-top: 1px solid var(--ink-100);
-      background: var(--white);
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+      background: var(--bg);
       z-index: 6;
       flex-shrink: 0;
     }
-    .footer a { color: var(--blue-700); text-decoration: none; cursor: pointer; }
-    .footer a:hover { text-decoration: underline; }
+    .footer a { color: var(--text-muted); text-decoration: none; cursor: pointer; }
+    .footer a:hover { color: var(--text); text-decoration: underline; }
 
     /* ------------------------------------------------------------------
-       Hero illustration (Login)
+       Auth illustration (Login / Register)
        ------------------------------------------------------------------ */
-    .hero-illu {
-      position: relative;
-      height: 70px;
-      margin: 0 0 18px;
+    .auth-illu {
       display: flex;
       align-items: center;
       justify-content: center;
+      margin: 0 0 16px;
     }
-    .ring {
-      position: absolute;
-      width: 70px; height: 70px;
-      border-radius: 50%;
-      border: 2px solid var(--blue-300);
-      opacity: 0.5;
-    }
-    .ring.r1 { transform: scale(1.6); animation: ringPulse 3s ease-in-out infinite; }
-    .ring.r2 { transform: scale(2.4); animation: ringPulse 3s ease-in-out infinite; animation-delay: -1s; }
-    .ring.r3 { transform: scale(3.2); animation: ringPulse 3s ease-in-out infinite; animation-delay: -2s; }
-    @keyframes ringPulse {
-      0%, 100% { opacity: 0.1; }
-      50% { opacity: 0.5; }
-    }
-    .hero-icon {
-      position: relative; z-index: 1;
-      width: 56px; height: 56px;
-      border-radius: 16px;
-      background: linear-gradient(135deg, var(--blue-500), var(--blue-800));
-      display: flex; align-items: center; justify-content: center;
-      color: white; font-size: 24px; font-weight: 800;
-      box-shadow: 0 12px 32px rgba(37, 99, 235, 0.5);
+    .auth-illu img {
+      width: 52px; height: 52px;
+      border-radius: 12px;
     }
 
     /* ------------------------------------------------------------------
        Toast
        ------------------------------------------------------------------ */
     .toast {
-      position: absolute; top: 16px; left: 16px; right: 16px;
-      padding: 10px 14px;
-      background: var(--ink-900);
-      color: white;
+      position: absolute; top: 12px; left: 12px; right: 12px;
+      padding: 10px 12px;
+      background: var(--text);
+      color: #fff;
       font-size: 12px; font-weight: 500;
-      border-radius: 10px;
-      box-shadow: 0 12px 32px rgba(0,0,0,0.3);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-lg);
       z-index: 100;
-      animation: toastIn 0.4s var(--easing);
+      animation: toastIn 0.25s var(--ease-out);
     }
-    .toast.err { background: #7f1d1d; }
-    .toast.ok { background: #064e3b; }
+    .toast.err { background: var(--error); }
+    .toast.ok { background: var(--success); }
     @keyframes toastIn {
-      from { opacity: 0; transform: translateY(-10px); }
+      from { opacity: 0; transform: translateY(-8px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
     /* ------------------------------------------------------------------
-       Misc
+       Layout helpers
        ------------------------------------------------------------------ */
     .row { display: flex; gap: 8px; }
     .row > * { flex: 1; }
+    .mt-8 { margin-top: 8px; }
     .mt-12 { margin-top: 12px; }
     .mt-16 { margin-top: 16px; }
     .hidden { display: none !important; }
-    .link-btn { background: none; border: none; color: var(--blue-700); cursor: pointer; font: inherit; padding: 0; text-decoration: underline; }
-    .link-btn:hover { color: var(--blue-900); }
+    .flex { display: flex; }
+    .flex-1 { flex: 1; }
+    .gap-8 { gap: 8px; }
+    .gap-12 { gap: 12px; }
+    .items-center { align-items: center; }
+    .justify-between { justify-content: space-between; }
+    .text-center { text-align: center; }
+    .text-sm { font-size: 12px; }
+    .text-xs { font-size: 11px; }
 
     /* password eye toggle */
     .pw-wrap { position: relative; }
-    .pw-wrap .input { padding-right: 36px; }
+    .pw-wrap .input { padding-right: 34px; }
     .pw-eye {
       position: absolute; right: 2px; top: 50%; transform: translateY(-50%);
-      background: none; border: none; cursor: pointer; padding: 6px 8px;
-      font-size: 14px; line-height: 1; color: var(--ink-500); border-radius: 6px;
+      background: none; border: none; cursor: pointer;
+      padding: 5px 7px;
+      font-size: 13px; line-height: 1;
+      color: var(--text-muted);
+      border-radius: 4px;
+      transition: background 0.15s var(--ease), color 0.15s var(--ease);
     }
-    .pw-eye:hover { color: var(--ink-900); background: var(--ink-100); }
+    .pw-eye:hover { background: var(--surface); color: var(--text); }
+
+    /* Onboarding step cards */
+    .ob-step {
+      display: flex; align-items: center; gap: 10px;
+      cursor: pointer;
+    }
+    .ob-step-icon {
+      width: 30px; height: 30px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 12px;
+      flex-shrink: 0;
+      background: var(--surface);
+      color: var(--text-muted);
+      transition: background 0.2s var(--ease), color 0.2s var(--ease);
+    }
+    .ob-step-icon.done {
+      background: var(--success-bg);
+      color: var(--success);
+    }
+
+    .ob-body {
+      padding-left: 40px;
+      margin: 10px 0 2px;
+    }
+    .ob-body .field {
+      margin-bottom: 8px;
+    }
+    .ob-body + .card {
+      margin-top: 10px;
+    }
+
+    /* status messages */
+    .status-ok { color: var(--success); }
+    .status-err { color: var(--error); }
 
     /* ------------------------------------------------------------------
        Reduced motion
        ------------------------------------------------------------------ */
-    /* Custom scrollbar — thin, blue-tinted, matches brand */
-    ::-webkit-scrollbar { width: 5px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--blue-200); border-radius: 999px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--blue-300); }
-
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
       }
     }
   </style>
@@ -497,23 +580,14 @@
 <body>
   <div class="scene" id="scene">
     <div class="layer-depth-0" aria-hidden="true"></div>
-    <div class="layer-depth-1" aria-hidden="true">
-      <div class="blob b1"></div>
-      <div class="blob b2"></div>
-      <div class="blob b3"></div>
-    </div>
+    <div class="layer-depth-1" aria-hidden="true"></div>
     <div class="layer-depth-2" aria-hidden="true"></div>
-    <div class="layer-depth-5" aria-hidden="true">
-      <div class="spark s1"></div>
-      <div class="spark s2"></div>
-      <div class="spark s3"></div>
-    </div>
 
     <div class="content">
       <div class="brand">
-        <img src="logo.png" alt="CVApplier" style="width:36px; height:36px; border-radius:10px;" />
+        <img class="brand-logo" src="logo.png" alt="SmartCVapply" />
         <div>
-          <div class="brand-name">CVApplier</div>
+          <div class="brand-name">SmartCVapply</div>
           <div class="brand-sub">Auto-fill job applications</div>
         </div>
       </div>
@@ -522,15 +596,12 @@
            LOGIN VIEW
            =========================================================== -->
       <section id="view-login" class="view active">
-        <div class="hero-illu" aria-hidden="true">
-          <div class="ring r1"></div>
-          <div class="ring r2"></div>
-          <div class="ring r3"></div>
-          <img src="logo.png" alt="CVApplier" style="position:relative; z-index:1; width:56px; height:56px; border-radius:16px; box-shadow:0 12px 32px rgba(37,99,235,0.5);" />
+        <div class="auth-illu" aria-hidden="true">
+          <img src="logo.png" alt="SmartCVapply" />
         </div>
 
-        <h1>Sign in to apply faster</h1>
-        <p class="muted">We use your data only to fill forms you trigger. Encrypted at rest, never shared.</p>
+        <h1>Sign in</h1>
+        <p class="muted">Your data is encrypted. We never share it.</p>
 
         <form id="login-form">
           <div class="field">
@@ -540,16 +611,16 @@
           <div class="field">
             <label class="label" for="password">Password</label>
             <div class="pw-wrap">
-              <input class="input" id="password" type="password" placeholder="••••••••••••" autocomplete="current-password" required minlength="12" />
+              <input class="input" id="password" type="password" placeholder="Min 12 characters" autocomplete="current-password" required minlength="12" />
               <button class="pw-eye" type="button" data-toggle="password" title="Show password">&#128065;</button>
             </div>
           </div>
-          <button class="btn btn-primary" type="submit">
+          <button class="btn btn-primary mt-8" type="submit">
             Sign in
             <span aria-hidden="true">→</span>
           </button>
         </form>
-        <p class="muted mt-12" style="text-align:center;">
+        <p class="muted mt-12 text-center">
           No account? <button class="link-btn" id="goto-signup">Create one</button>
         </p>
       </section>
@@ -558,15 +629,12 @@
            REGISTER VIEW
            =========================================================== -->
       <section id="view-register" class="view">
-        <div class="hero-illu" aria-hidden="true">
-          <div class="ring r1"></div>
-          <div class="ring r2"></div>
-          <div class="ring r3"></div>
-          <img src="logo.png" alt="CVApplier" style="position:relative; z-index:1; width:56px; height:56px; border-radius:16px; box-shadow:0 12px 32px rgba(37,99,235,0.5);" />
+        <div class="auth-illu" aria-hidden="true">
+          <img src="logo.png" alt="SmartCVapply" />
         </div>
 
-        <h1>Create your account</h1>
-        <p class="muted">Your CV data stays encrypted. We never share it with third parties.</p>
+        <h1>Create account</h1>
+        <p class="muted">Your CV data stays encrypted. Never shared.</p>
 
         <form id="register-form">
           <div class="field">
@@ -576,61 +644,133 @@
           <div class="field">
             <label class="label" for="reg-password">Password</label>
             <div class="pw-wrap">
-              <input class="input" id="reg-password" type="password" placeholder="••••••••••••" autocomplete="new-password" required minlength="12" />
+              <input class="input" id="reg-password" type="password" placeholder="Min 12 characters" autocomplete="new-password" required minlength="12" />
               <button class="pw-eye" type="button" data-toggle="reg-password" title="Show password">&#128065;</button>
             </div>
           </div>
           <div class="field">
             <label class="label" for="reg-confirm">Confirm password</label>
             <div class="pw-wrap">
-              <input class="input" id="reg-confirm" type="password" placeholder="••••••••••••" autocomplete="new-password" required minlength="12" />
+              <input class="input" id="reg-confirm" type="password" placeholder="Min 12 characters" autocomplete="new-password" required minlength="12" />
               <button class="pw-eye" type="button" data-toggle="reg-confirm" title="Show password">&#128065;</button>
             </div>
           </div>
-          <button class="btn btn-primary" type="submit">
+          <button class="btn btn-primary mt-8" type="submit">
             Create account
             <span aria-hidden="true">→</span>
           </button>
         </form>
-        <p class="muted mt-12" style="text-align:center;">
+        <p class="muted mt-12 text-center">
           Already have one? <button class="link-btn" id="goto-login">Sign in</button>
         </p>
+      </section>
+
+      <!-- ===========================================================
+           ONBOARDING VIEW
+           =========================================================== -->
+      <section id="view-onboarding" class="view">
+        <h1>Welcome</h1>
+        <p class="muted">Complete these steps to start applying.</p>
+
+        <div class="card" style="padding:16px;">
+          <div class="ob-step">
+            <div class="ob-step-icon" id="ob-step1-icon">1</div>
+            <div class="flex-1">
+              <div style="font-weight:600; font-size:13px; line-height:1.3;">Set your AI API key</div>
+              <div class="muted text-xs" style="margin-top:4px;">Used to parse CVs and resolve unknown form fields.</div>
+            </div>
+            <span class="badge skip" id="ob-step1-badge">pending</span>
+          </div>
+        </div>
+        <div class="ob-body hidden" id="ob-step1-body">
+          <div class="field">
+            <label class="label" for="ob-key">API key</label>
+            <div class="pw-wrap">
+              <input class="input" id="ob-key" type="password" placeholder="sk-..." />
+              <button class="pw-eye" type="button" data-toggle="ob-key" title="Show">&#128065;</button>
+            </div>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="ob-test-key">Test &amp; save</button>
+          <p class="muted text-xs" style="margin-top:8px; min-height:14px;" id="ob-key-status"></p>
+        </div>
+
+        <div class="card" style="padding:16px;">
+          <div class="ob-step">
+            <div class="ob-step-icon" id="ob-step2-icon">2</div>
+            <div class="flex-1">
+              <div style="font-weight:600; font-size:13px; line-height:1.3;">Upload your CV</div>
+              <div class="muted text-xs" style="margin-top:4px;">We extract your experience, skills, and education.</div>
+            </div>
+            <span class="badge skip" id="ob-step2-badge">pending</span>
+          </div>
+        </div>
+        <div class="ob-body hidden" id="ob-step2-body">
+          <div class="field">
+            <input class="input" id="ob-cv-file" type="file" accept=".pdf,.docx" />
+          </div>
+          <button class="btn btn-primary btn-sm" id="ob-upload-cv">Upload &amp; parse</button>
+          <p class="muted text-xs" style="margin-top:8px; min-height:14px;" id="ob-cv-status"></p>
+        </div>
+
+        <div class="card" style="padding:16px;">
+          <div class="ob-step">
+            <div class="ob-step-icon" id="ob-step3-icon">3</div>
+            <div class="flex-1">
+              <div style="font-weight:600; font-size:13px; line-height:1.3;">Review your profile</div>
+              <div class="muted text-xs" style="margin-top:4px;">Check that your info is correct before applying.</div>
+            </div>
+            <span class="badge skip" id="ob-step3-badge">pending</span>
+          </div>
+        </div>
+        <div class="ob-body hidden" id="ob-step3-body">
+          <p class="muted text-sm">Go to Settings → Profile to review your data.</p>
+          <button class="btn btn-ghost btn-sm" id="ob-go-profile">Open profile settings</button>
+        </div>
+
+        <button class="btn btn-primary" style="margin-top:20px;" id="ob-finish" disabled>
+          Start applying
+          <span aria-hidden="true">→</span>
+        </button>
+        <p class="muted text-center text-xs" style="margin-top:8px;" id="ob-hint">Complete all 3 steps to continue</p>
       </section>
 
       <!-- ===========================================================
            MAIN VIEW (logged in)
            =========================================================== -->
       <section id="view-main" class="view">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 14px;">
+        <div class="flex justify-between items-center" style="margin-bottom: 12px;">
           <span class="pill"><span class="dot"></span> Ready</span>
-          <button class="link-btn" id="goto-settings">Settings</button>
+          <button class="header-btn" id="goto-settings">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            Settings
+          </button>
         </div>
 
-        <h1>Hi, <span id="user-email">there</span> 👋</h1>
-        <p>CVApplier is watching this page. When it spots a job application form, it will offer to fill it for you.</p>
+        <h1>Hi, <span id="user-email">there</span></h1>
+        <p>Watching this page for job application forms.</p>
 
-        <div id="form-detected-card" class="card hidden" style="border: 1.5px solid var(--blue-300); background: var(--blue-50);">
-          <h2 style="margin-top:0; color: var(--blue-800);">📋 Form detected</h2>
-          <p class="muted" style="margin-bottom:10px;">A job application form is ready on this page.</p>
-          <button class="btn btn-primary" id="trigger-fill-btn" style="margin-top:4px;">
+        <div class="card hidden" id="form-detected-card" style="border-color: var(--accent); background: var(--accent-soft);">
+          <h2 style="margin-top:0;">Form detected</h2>
+          <p class="muted" style="margin-bottom:8px;">A job application form is ready on this page.</p>
+          <button class="btn btn-primary" id="trigger-fill-btn">
             Review and apply
             <span aria-hidden="true">→</span>
           </button>
         </div>
 
         <div class="card">
-          <h2 style="margin-top:0;">What CVApplier can do here</h2>
-          <p class="muted" style="margin-bottom:10px;">It detects the form, previews each field, and only fills after you confirm. Source of every value is shown.</p>
-          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <h2 style="margin-top:0;">How it works</h2>
+          <p class="muted" style="margin-bottom:8px;">Detects forms, previews fields, fills only after you confirm. Every value is traceable.</p>
+          <div class="flex gap-8" style="flex-wrap:wrap;">
             <span class="badge learned">learned</span>
-            <span class="badge local">local heuristic</span>
-            <span class="badge llm">LLM fallback</span>
+            <span class="badge local">heuristic</span>
+            <span class="badge llm">LLM</span>
           </div>
         </div>
 
         <div class="card">
           <h2 style="margin-top:0;">No form detected?</h2>
-          <p class="muted" style="margin-bottom:10px;">Click below to manually scan the page.</p>
+          <p class="muted" style="margin-bottom:8px;">Click below to manually scan the page.</p>
           <button class="btn btn-ghost" id="scan-form-btn">Scan this page</button>
         </div>
       </section>
@@ -639,25 +779,25 @@
            FILL VIEW (autofill in progress / preview)
            =========================================================== -->
       <section id="view-fill" class="view">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+        <div class="flex justify-between items-center" style="margin-bottom: 6px;">
           <span class="pill" id="fill-pill"><span class="dot"></span> Autofilling</span>
-          <span class="muted" id="fill-domain">example.com</span>
+          <span class="muted text-sm" id="fill-domain">example.com</span>
         </div>
 
         <h1>Review and apply</h1>
         <div class="progress-bar"><div class="progress-fill" id="fill-progress"></div></div>
         <p class="muted" id="fill-summary">Resolving 0 / 0 fields…</p>
 
-        <div class="card" style="padding: 6px 14px; max-height: 200px; overflow-y: auto;">
+        <div class="card" style="padding:4px 12px; max-height:200px; overflow-y:auto;">
           <div id="fill-list">
-            <p class="muted" style="padding: 12px 0; text-align: center;">Waiting for backend…</p>
+            <p class="muted text-center" style="padding:12px 0;">Waiting for backend…</p>
           </div>
         </div>
 
         <div class="mt-16">
           <button class="btn btn-primary" id="fill-apply" disabled>Apply to page</button>
         </div>
-        <p class="muted mt-12" style="text-align:center;">
+        <p class="muted mt-12 text-center">
           <button class="link-btn" id="fill-cancel">Cancel</button>
         </p>
       </section>
@@ -666,9 +806,12 @@
            SETTINGS VIEW
            =========================================================== -->
       <section id="view-settings" class="view">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
-          <button class="link-btn" id="settings-back">← Back</button>
-          <span class="muted" id="settings-status">Saved</span>
+        <div class="flex justify-between items-center" style="margin-bottom:10px;">
+          <button class="header-btn" id="settings-back">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+            Back
+          </button>
+          <span class="muted text-sm" id="settings-status">Saved</span>
         </div>
 
         <h1>Settings</h1>
@@ -682,14 +825,14 @@
         </div>
 
         <div id="tab-profile" class="tab-panel">
-          <div class="card" style="padding:10px 12px; margin-bottom:12px;">
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-              <div style="flex:1;">
+          <div class="card" style="padding:10px 12px; margin-bottom:10px;">
+            <div class="flex items-center gap-8">
+              <div class="flex-1">
                 <label class="label" style="margin-bottom:2px;">Profile source</label>
                 <select class="input" id="pf-source-cv" style="font-size:12px; padding:6px 10px;"></select>
               </div>
             </div>
-            <p class="muted" id="pf-source-label" style="margin-top:4px; font-size:11px; min-height:14px;"></p>
+            <p class="muted text-xs mt-8" id="pf-source-label"></p>
           </div>
           <div class="field">
             <label class="label" for="pf-first-name">First name</label>
@@ -745,28 +888,28 @@
             <input class="input" id="pf-country-code" type="text" placeholder="ES" style="width:80px;" />
           </div>
 
-          <h2 style="margin-top:16px;">Work experience <span class="muted" id="pf-exp-count"></span></h2>
+          <h2>Work experience <span class="muted" id="pf-exp-count"></span></h2>
           <div id="pf-exp-cards"></div>
-          <button class="btn btn-ghost" id="pf-exp-add" style="margin-top:6px; font-size:12px; padding:6px;">+ Add experience</button>
+          <button class="btn btn-ghost btn-sm mt-8" id="pf-exp-add">+ Add experience</button>
 
-          <h2 style="margin-top:16px;">Education <span class="muted" id="pf-edu-count"></span></h2>
+          <h2>Education <span class="muted" id="pf-edu-count"></span></h2>
           <div id="pf-edu-cards"></div>
-          <button class="btn btn-ghost" id="pf-edu-add" style="margin-top:6px; font-size:12px; padding:6px;">+ Add education</button>
+          <button class="btn btn-ghost btn-sm mt-8" id="pf-edu-add">+ Add education</button>
 
-          <h2 style="margin-top:16px;">Certifications <span class="muted" id="pf-cert-count"></span></h2>
+          <h2>Certifications <span class="muted" id="pf-cert-count"></span></h2>
           <div id="pf-cert-cards"></div>
-          <button class="btn btn-ghost" id="pf-cert-add" style="margin-top:6px; font-size:12px; padding:6px;">+ Add certification</button>
+          <button class="btn btn-ghost btn-sm mt-8" id="pf-cert-add">+ Add certification</button>
 
-          <h2 style="margin-top:16px;">Languages</h2>
+          <h2>Languages</h2>
           <div class="field">
             <label class="label" for="pf-languages">Languages <span class="muted">(comma separated, e.g. "Spanish: native, English: fluent")</span></label>
             <input class="input" id="pf-languages" type="text" placeholder="Spanish: native, English: fluent" />
           </div>
-          <button class="btn btn-primary" id="pf-save">
+          <button class="btn btn-primary mt-16" id="pf-save">
             Save profile
             <span aria-hidden="true">→</span>
           </button>
-          <p class="muted mt-12" id="pf-status" style="min-height:14px;"></p>
+          <p class="muted mt-12" id="pf-status"></p>
         </div>
 
         <div id="tab-general" class="tab-panel">
@@ -824,23 +967,24 @@
             <button class="btn btn-ghost" id="set-test">Test connection</button>
             <button class="btn btn-primary" id="set-save-llm">Save</button>
           </div>
-          <p class="muted mt-12" id="set-test-result" style="min-height:14px;"></p>
+          <p class="muted mt-12" id="set-test-result"></p>
         </div>
 
         <div id="tab-cvs" class="tab-panel hidden">
-          <div class="field">
-            <label class="label" for="cv-file-input">Upload new CV</label>
-            <input class="input" id="cv-file-input" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+          <div>
+            <div class="field">
+              <label class="label" for="cv-file-input">Upload new CV</label>
+              <input class="input" id="cv-file-input" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+            </div>
+            <button class="btn btn-primary" id="cv-upload-btn">
+              Upload
+              <span aria-hidden="true">↑</span>
+            </button>
+            <p class="muted mt-12" id="cv-upload-status"></p>
+            <h2>Your CVs</h2>
           </div>
-          <button class="btn btn-primary" id="cv-upload-btn">
-            Upload
-            <span aria-hidden="true">↑</span>
-          </button>
-          <p class="muted mt-12" id="cv-upload-status" style="min-height:14px;"></p>
-
-          <h2 style="margin-top:18px;">Your CVs</h2>
-          <div id="cv-list" style="max-height: 200px; overflow-y: auto;">
-            <p class="muted" style="padding: 12px 0; text-align: center;">Loading…</p>
+          <div id="cv-list" style="flex:1; min-height:0; overflow-y:auto;">
+            <p class="muted text-center" style="padding:12px 0;">Loading…</p>
           </div>
         </div>
 
@@ -849,15 +993,13 @@
             <h2 style="margin-top:0;">Account</h2>
             <p class="muted" id="set-email-display">Signed in as: —</p>
           </div>
-          <div class="mt-12">
-            <button class="btn btn-danger" id="set-logout">Sign out</button>
-          </div>
+          <button class="btn btn-danger mt-12" id="set-logout">Sign out</button>
         </div>
       </section>
     </div>
 
     <div class="footer">
-      <span>CVApplier v0.1.0</span>
+      <span>SmartCVapply v0.1.0</span>
       <a id="footer-help" target="_blank" rel="noopener">Help</a>
     </div>
   </div>

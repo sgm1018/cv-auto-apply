@@ -1,24 +1,44 @@
+# Python
 __pycache__/
 *.pyc
 *.pyo
 .venv/
 venv/
-.env
-.env.local
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 .coverage
 htmlcov/
 *.egg-info/
-dist/
-build/
+
+# Node
 node_modules/
 .wxt/
 .output/
+
+# Build output
+dist/
+build/
+
+# Logs
 *.log
+
+# Environment
+.env
+.env.local
+
+# IDE
 .idea/
 .vscode/
+
+# OS
 .DS_Store
 Thumbs.db
+
+# Index
 .codegraph/
+
+# Docs — internal design docs, not for consumers
+docs/superpowers/
+
+.playwright/

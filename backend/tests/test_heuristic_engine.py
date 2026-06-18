@@ -1,8 +1,8 @@
 """Tests for the heuristic engine."""
 from beanie import PydanticObjectId
 
-from cvapplier.models.profile import Profile
-from cvapplier.services.heuristic_engine import ExtractedField, HeuristicEngine
+from smartcvapply.models.profile import Profile
+from smartcvapply.services.heuristic_engine import ExtractedField, HeuristicEngine
 
 
 def make_field(fid: str, label: str, type_: str = "text", **kwargs) -> ExtractedField:

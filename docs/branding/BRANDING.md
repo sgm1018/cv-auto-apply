@@ -1,4 +1,4 @@
-# QuickApply — Brand Identity & Design System
+# SmartCVapply — Brand Identity & Design System
 
 **Version:** 1.0
 **Date:** 2026-06-17
@@ -8,13 +8,13 @@
 
 ## 1. Brand Overview
 
-### 1.1 What is QuickApply
+### 1.1 What is SmartCVapply
 
-QuickApply is a SaaS platform that eliminates the repetitive pain of filling out job application forms. Users upload their CV once, and QuickApply automatically detects forms on any job portal, maps fields to their profile, and fills them in seconds — with AI-powered smart matching and full user control.
+SmartCVapply is a SaaS platform that eliminates the repetitive pain of filling out job application forms. Users upload their CV once, and SmartCVapply automatically detects forms on any job portal, maps fields to their profile, and fills them in seconds — with AI-powered smart matching and full user control.
 
-### 1.2 Brand Concept: "Velocity with Precision"
+### 1.2 Brand Concept: "Smart Speed"
 
-QuickApply is about **speed without chaos**. The brand conveys that complex tasks can be done effortlessly, like a well-oiled machine. The blue palette communicates **trust, intelligence, and professionalism** — critical for a tool handling personal career data. The lightning bolt motif reinforces **instant action**, while the document/form elements ground the brand in its core function.
+SmartCVapply is about **intelligence without friction**. The brand conveys that complex tasks are handled effortlessly through a system that learns and improves with every use. The blue palette communicates **trust, intelligence, and professionalism** — critical for a tool handling personal career data. The lightning bolt motif reinforces **instant action**, while the document/form elements ground the brand in its core function.
 
 ### 1.3 Brand Personality
 
@@ -37,13 +37,13 @@ QuickApply is about **speed without chaos**. The brand conveys that complex task
 
 ### 2.1 Primary Logo
 
-The primary logo combines the **icon mark** (document + lightning bolt) with the **wordmark** ("QuickApply").
+The primary logo combines the **icon mark** (document + lightning bolt) with the **wordmark** ("SmartCVapply").
 
-- **"Quick"** — Bold weight (800), dark slate (`#1e293b`) — conveys speed, strength
-- **"Apply"** — Regular weight (400), blue (`#3b82f6`) — conveys the action, approachable
-- **Tagline:** "FILL FORMS IN SECONDS" — uppercase, tracked, muted gray
+- **"Smart"** — Bold weight (800), dark slate (`#1e293b`) — conveys intelligence, confidence
+- **"CV"** — Regular weight (400), blue (`#3b82f6`) — conveys the CV/document focus
+- **"apply"** — Light weight (300), blue (`#3b82f6`) — conveys the action
 
-**File:** `docs/branding/logo-quickapply.svg`
+**File:** `docs/branding/logo-smartcvapply.svg`
 
 ### 2.2 Icon Mark
 
@@ -61,9 +61,9 @@ A standalone icon for favicons, extension icons, app tiles, and social profiles.
 
 | Variant | Use case | File |
 |---|---|---|
-| Primary (icon + wordmark) | Website header, landing page, docs | `logo-quickapply.svg` |
+| Primary (icon + wordmark) | Website header, landing page, docs | `logo-smartcvapply.svg` |
 | Icon only | Favicon, extension icon, social avatar | `logo-icon.svg` |
-| Wordmark only | Text-heavy contexts, email signatures | Text rendering of "QuickApply" |
+| Wordmark only | Text-heavy contexts, email signatures | Text rendering of "SmartCVapply" |
 | Monochrome (white) | Dark backgrounds, overlays | White version of icon |
 | Monochrome (dark) | Light backgrounds, print | Dark version of icon |
 
@@ -226,7 +226,7 @@ Based on a **4px base unit**:
 
 ### 6.1 Border Philosophy
 
-QuickApply uses a **layered elevation system** — surfaces are differentiated by subtle shadows rather than heavy borders. Borders are used sparingly for structure; shadows create depth and hierarchy.
+SmartCVapply uses a **layered elevation system** — surfaces are differentiated by subtle shadows rather than heavy borders. Borders are used sparingly for structure; shadows create depth and hierarchy.
 
 ### 6.2 Border Radius
 
@@ -547,12 +547,12 @@ Use **Lucide Icons** (lucide.dev) — clean, consistent, open-source, MIT licens
 
 ```
 docs/branding/
-├── BRANDING.md              # This document
-├── logo-quickapply.svg      # Primary logo (icon + wordmark)
-├── logo-icon.svg            # Icon only (favicon, extension)
-├── logo-wordmark.svg        # Wordmark only (text contexts)
-├── logo-white.svg           # White version for dark backgrounds
-└── palette.svg              # Visual color palette reference
+├── BRANDING.md                    # This document
+├── logo-smartcvapply.svg          # Primary logo (icon + wordmark)
+├── logo-icon.svg                  # Icon only (favicon, extension)
+├── logo-wordmark-smartcvapply.svg # Wordmark only (text contexts)
+├── logo-white-smartcvapply.svg    # White version for dark backgrounds
+└── palette.svg                    # Visual color palette reference
 ```
 
 ---
@@ -582,4 +582,4 @@ docs/branding/
 
 ---
 
-*This document is the single source of truth for QuickApply's visual identity. Any new component, page, or material must follow these guidelines. If something isn't covered here, default to the existing patterns in the codebase.*
+*This document is the single source of truth for SmartCVapply's visual identity. Any new component, page, or material must follow these guidelines. If something isn't covered here, default to the existing patterns in the codebase.*

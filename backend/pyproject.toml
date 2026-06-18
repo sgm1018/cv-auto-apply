@@ -1,7 +1,7 @@
 [project]
-name = "cvapplier"
+name = "smartcvapply"
 version = "0.1.0"
-description = "CVApplier backend"
+description = "SmartCVapply backend"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115.0",

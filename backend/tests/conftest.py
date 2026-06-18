@@ -7,16 +7,16 @@ import pytest
 import pytest_asyncio
 from mongomock_motor import AsyncMongoMockClient
 
-from cvapplier.core.config import get_settings
-from cvapplier.core.db import init_beanie
-from cvapplier.models import CV, FeedbackEvent, FillSession, LearnedMapping, Profile, User
+from smartcvapply.core.config import get_settings
+from smartcvapply.core.db import init_beanie
+from smartcvapply.models import CV, FeedbackEvent, FillSession, LearnedMapping, Profile, User
 
 
 @pytest.fixture(autouse=True)
 def _set_test_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("APP_ENV", "development")
     monkeypatch.setenv("MONGO_URI", "mongodb://test")
-    monkeypatch.setenv("MONGO_DB", "cvapplier_test")
+    monkeypatch.setenv("MONGO_DB", "smartcvapply_test")
     monkeypatch.setenv("JWT_SECRET", "x" * 32)
     monkeypatch.setenv("FERNET_KEY", "jYbqgCuMy004d4KbFRAcSRtwg8ImpLefLABtUlF_AaU=")
     monkeypatch.setenv("CV_MASTER_KEY", "a" * 32)
@@ -31,7 +31,7 @@ def _set_test_env(monkeypatch: pytest.MonkeyPatch) -> None:
 async def mongo_db() -> AsyncIterator[None]:
     client = AsyncMongoMockClient()
     await init_beanie(
-        client, db_name="cvapplier_test",
+        client, db_name="smartcvapply_test",
         document_models=[User, Profile, CV, LearnedMapping, FillSession, FeedbackEvent],
     )
     yield

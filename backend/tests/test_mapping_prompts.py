@@ -1,5 +1,5 @@
 """Tests for mapping prompts and prompt-injection defense."""
-from cvapplier.services.mapping_prompts import (
+from smartcvapply.services.mapping_prompts import (
     build_resolve_prompt,
     sanitize_for_llm,
     SYSTEM_PROMPT,
