@@ -19,7 +19,7 @@ SmartCVapply is a Chrome extension backed by a Python API that detects job appli
 
 Free. Open source. MIT licensed.
 
-[Download for Chrome](https://chrome.google.com/webstore) · [View Source on GitHub](https://github.com/sgm1018/smartcvapply)
+[Download for Chrome](https://chrome.google.com/webstore) · [View Source on GitHub](https://github.com/sgm1018/cv-auto-apply)
 
 ---
 
@@ -338,10 +338,10 @@ Built by [@sgm1018](https://github.com/sgm1018).
 
 ## Star History
 
-<a href="https://www.star-history.com/#sgm1018/smartcvapply&Date">
+<a href="https://www.star-history.com/#sgm1018/cv-auto-apply&Date">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=sgm1018/smartcvapply&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=sgm1018/smartcvapply&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=sgm1018/smartcvapply&type=Date" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=sgm1018/cv-auto-apply&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=sgm1018/cv-auto-apply&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=sgm1018/cv-auto-apply&type=Date" />
  </picture>
 </a>
