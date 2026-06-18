@@ -68,4 +68,5 @@ export type Message =
   | { type: "SETTINGS_UPDATE"; patch: Partial<Settings> }
   | { type: "PROFILE_UPDATED" }
   | { type: "TRIGGER_FILL" }
-  | { type: "PENDING_FILL_CHECK" };
+  | { type: "PENDING_FILL_CHECK" }
+  | { type: "FETCH_CV_FILE"; url: string; filename: string; mimeType: string };

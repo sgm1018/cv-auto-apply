@@ -5,14 +5,27 @@ const API_BASE = "http://localhost:8000";
 const BANNER_ID = "__cvapplier_banner__";
 
 interface FormDetection {
-  form: HTMLFormElement;
+  form: HTMLElement;
   fields: ExtractedField[];
   detectedAt: number;
 }
 
-// Detect form on page
+const FIELD_HINTS = [
+  "name", "email", "phone", "resume", "cv", "first name", "last name",
+  "nombre", "apellido", "apellidos", "correo", "telefono", "teléfono",
+  "linkedin", "github", "portfolio", "location", "address", "dirección",
+  "direccion", "ciudad", "pais", "país", "country", "city",
+];
+
+const FORM_LIKE_ATTRS = /form|application|apply|questionnaire/i;
+const FORM_LIKE_TAGS = new Set(["div", "section", "article", "fieldset", "main", "aside", "form"]);
+
+// ── Detection ──────────────────────────────────────────────────────
+
 function detectForms(): FormDetection[] {
   const out: FormDetection[] = [];
+
+  // Strategy 1: native <form> elements
   for (const form of document.querySelectorAll<HTMLFormElement>("form")) {
     if (form.dataset.cvapplierSeen) continue;
     const fields = extractFields(form);
@@ -21,27 +34,112 @@ function detectForms(): FormDetection[] {
       out.push({ form, fields, detectedAt: Date.now() });
     }
   }
+
+  // Strategy 2: SPA containers that look like forms (no <form> tag)
+  for (const container of findFormContainers()) {
+    if (container.dataset.cvapplierSeen) continue;
+    if (container.tagName === "FORM") continue; // already handled above
+    const fields = extractFields(container);
+    if (shouldSuggest(fields)) {
+      container.dataset.cvapplierSeen = "1";
+      out.push({ form: container, fields, detectedAt: Date.now() });
+    }
+  }
+
   return out;
+}
+
+function findFormContainers(): HTMLElement[] {
+  const inputs = document.querySelectorAll<HTMLElement>(
+    'input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="image"]), select, textarea',
+  );
+  if (inputs.length < 3) return [];
+
+  const groups = new Map<HTMLElement, HTMLElement[]>();
+  for (const el of inputs) {
+    const container = findFormAncestor(el);
+    if (!container) continue;
+    if (!groups.has(container)) groups.set(container, []);
+    groups.get(container)!.push(el);
+  }
+
+  return Array.from(groups.entries())
+    .filter(([, els]) => els.length >= 3)
+    .map(([c]) => c);
+}
+
+function findFormAncestor(el: HTMLElement): HTMLElement | null {
+  let cur: HTMLElement | null = el.parentElement;
+  while (cur && cur !== document.body && cur !== document.documentElement) {
+    if (
+      (cur.dataset.formId) ||
+      (cur.dataset.testid && /form/i.test(cur.dataset.testid)) ||
+      (cur.getAttribute("role") === "form") ||
+      (cur.className && typeof cur.className === "string" && FORM_LIKE_ATTRS.test(cur.className)) ||
+      (cur.id && FORM_LIKE_ATTRS.test(cur.id))
+    ) {
+      return cur;
+    }
+    cur = cur.parentElement;
+  }
+  // Fallback: closest block-level ancestor with ≥ 3 visible inputs
+  cur = el.parentElement;
+  while (cur && cur !== document.body && cur !== document.documentElement) {
+    if (FORM_LIKE_TAGS.has(cur.tagName.toLowerCase())) {
+      const childInputs = cur.querySelectorAll<HTMLElement>(
+        'input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="image"]), select, textarea',
+      );
+      if (childInputs.length >= 3) return cur;
+    }
+    cur = cur.parentElement;
+  }
+  return null;
 }
 
 function shouldSuggest(fields: ExtractedField[]): boolean {
   if (fields.length < 3) return false;
-  // Heuristic: at least one field whose label/type hints at a job-application concept
-  const hints = ["name", "email", "phone", "resume", "cv", "first name", "last name", "nombre", "correo", "telefono", "linkedin"];
   for (const f of fields) {
     const hay = `${f.label ?? ""} ${f.name ?? ""} ${f.placeholder ?? ""}`.toLowerCase();
-    if (hints.some((h) => hay.includes(h))) return true;
+    if (FIELD_HINTS.some((h) => hay.includes(h))) return true;
   }
   return false;
 }
 
-function extractFields(form: HTMLFormElement): ExtractedField[] {
+function extractFields(root: HTMLElement): ExtractedField[] {
   const out: ExtractedField[] = [];
+  const seenRadioGroups = new Set<string>();
   let idx = 0;
-  for (const el of form.querySelectorAll<HTMLElement>("input, select, textarea")) {
+
+  for (const el of root.querySelectorAll<HTMLElement>("input, select, textarea")) {
     if ((el as HTMLInputElement).type === "hidden") continue;
     if ((el as HTMLInputElement).type === "submit") continue;
+
+    // Radio buttons: group by name, emit one field with options
+    if ((el as HTMLInputElement).type === "radio") {
+      const radioName = (el as HTMLInputElement).name;
+      if (!radioName || seenRadioGroups.has(radioName)) continue;
+      seenRadioGroups.add(radioName);
+      const allRadios = root.querySelectorAll<HTMLInputElement>(`input[type="radio"][name="${cssEscape(radioName)}"]`);
+      const label = resolveLabel(el);
+      const options: Array<{ value: string; label: string }> = [];
+      for (const r of allRadios) {
+        const rLabel = resolveLabel(r) ?? r.value ?? "";
+        options.push({ value: r.value, label: rLabel });
+      }
+      out.push({
+        field_id: `name:${radioName}`,
+        tag: "select",
+        type: "radio",
+        label: label ?? undefined,
+        placeholder: undefined,
+        required: el.getAttribute("required") !== null,
+        options,
+      });
+      continue;
+    }
+
     const label = resolveLabel(el);
+    const fieldOptions = el instanceof HTMLSelectElement ? extractSelectOptions(el) : undefined;
     out.push({
       field_id: stableId(el, idx++),
       tag: el.tagName.toLowerCase() === "input" ? "input" : (el.tagName.toLowerCase() as any),
@@ -51,10 +149,20 @@ function extractFields(form: HTMLFormElement): ExtractedField[] {
       label: label ?? undefined,
       placeholder: (el as HTMLInputElement).placeholder || undefined,
       required: (el as HTMLInputElement).required || false,
+      options: fieldOptions,
       current_value: (el as HTMLInputElement).value || undefined,
     });
   }
   return out;
+}
+
+function extractSelectOptions(el: HTMLSelectElement): Array<{ value: string; label: string }> | undefined {
+  if (el.tagName !== "SELECT" || !el.options || el.options.length === 0) return undefined;
+  const opts: Array<{ value: string; label: string }> = [];
+  for (const opt of el.options) {
+    if (opt.value) opts.push({ value: opt.value, label: opt.textContent?.trim() || opt.value });
+  }
+  return opts.length > 0 ? opts : undefined;
 }
 
 function stableId(el: HTMLElement, idx: number): string {
@@ -89,7 +197,7 @@ function cssEscape(s: string): string {
 }
 
 // Mount in-page banner
-function showBanner(form: HTMLFormElement) {
+function showBanner(_form: HTMLElement) {
   if (document.getElementById(BANNER_ID)) return;
   const host = document.createElement("div");
   host.id = BANNER_ID;
@@ -181,10 +289,40 @@ async function autofillFromMapping(mapping: Record<string, unknown>) {
     if (entry === null || entry === undefined) continue;
     // Accept both shapes: flat value string OR object { value, source }
     let raw: unknown;
+    let meta: Record<string, unknown> | null = null;
     if (typeof entry === "object" && entry !== null && "value" in (entry as object)) {
       raw = (entry as { value: unknown }).value;
+    } else if (typeof entry === "object" && entry !== null) {
+      raw = null;
+      meta = entry as Record<string, unknown>;
     } else {
       raw = entry;
+    }
+    // Handle file (CV) fields
+    if (meta && meta["__type"] === "cv_file" && el instanceof HTMLInputElement && el.type === "file") {
+      try {
+        const result = await chrome.runtime.sendMessage({
+          type: "FETCH_CV_FILE",
+          url: meta["url"] as string,
+          filename: meta["filename"] as string,
+          mimeType: meta["mime_type"] as string,
+        });
+        if (result && result.ok && result.base64) {
+          const binary = atob(result.base64);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+          }
+          const file = new File([bytes], result.filename, { type: result.mimeType });
+          const dt = new DataTransfer();
+          dt.items.add(file);
+          el.files = dt.files;
+          el.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+      } catch (_e) {
+        // file download failed, skip
+      }
+      continue;
     }
     if (raw === null || raw === undefined || raw === "") continue;
     const value = String(raw);
@@ -238,6 +376,16 @@ function init() {
       }
     }, 500),
   ).observe(document.body, { childList: true, subtree: true });
+  // Polling fallback for slow SPAs that render in stages (1s, 2s, 4s, 8s)
+  [1000, 2000, 4000, 8000].forEach((ms) => {
+    setTimeout(() => {
+      const found = detectForms();
+      if (found.length > 0) {
+        detectedForms.push(...found);
+        showBanner(found[0].form);
+      }
+    }, ms);
+  });
 }
 
 init();

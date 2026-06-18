@@ -82,12 +82,16 @@ async function maybeTriggerFillFromContent() {
   }
 }
 
+async function getSourceTabId() {
+  const stored = await chrome.storage.session.get("sourceTabId");
+  return stored.sourceTabId || null;
+}
+
 async function scanCurrentTabForForms() {
-  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-  const tab = tabs[0];
-  if (!tab || !tab.id) return [];
+  const tabId = await getSourceTabId();
+  if (!tabId) return [];
   try {
-    const result = await chrome.tabs.sendMessage(tab.id, { type: "GET_FORMS" });
+    const result = await chrome.tabs.sendMessage(tabId, { type: "GET_FORMS" });
     if (result && result.forms && result.forms.length > 0) {
       return result.forms;
     }
@@ -677,10 +681,12 @@ function wireEvents() {
   if (fillApply) {
     fillApply.addEventListener("click", async function () {
       if (!state.fillSession) return;
-      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-      const tab = tabs[0];
-      if (!tab || !tab.id) return;
-      await chrome.tabs.sendMessage(tab.id, {
+      const tabId = await getSourceTabId();
+      if (!tabId) {
+        toast("No source tab found", "err");
+        return;
+      }
+      await chrome.tabs.sendMessage(tabId, {
         type: "APPLY_MAPPING",
         mapping: state.fillSession.mapping,
       });

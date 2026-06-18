@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     cv_master_key: str = Field(default="a" * 32, min_length=16)
 
     cors_allowed_origins: str = "http://localhost:5173"
-
+    public_url: str = ""
     sentry_dsn: str = ""
 
     @field_validator("cors_allowed_origins")

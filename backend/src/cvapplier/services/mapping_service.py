@@ -3,12 +3,18 @@ import json
 from collections.abc import Awaitable, Callable
 from typing import Any
 
+from cvapplier.core.config import get_settings
 from cvapplier.core.logging import get_logger
 from cvapplier.core.rate_limit import TokenBucketRateLimiter
 from cvapplier.models.user import User
+from cvapplier.repositories.cv_repository import CVRepository
 from cvapplier.repositories.learned_mapping_repository import LearnedMappingRepository
 from cvapplier.repositories.profile_repository import ProfileRepository
-from cvapplier.services.heuristic_engine import ExtractedField, HeuristicEngine
+from cvapplier.services.heuristic_engine import (
+    _FILE_VALUE_SENTINEL,
+    ExtractedField,
+    HeuristicEngine,
+)
 from cvapplier.services.llm_gateway import LLMGateway
 from cvapplier.services.mapping_prompts import (
     build_resolve_prompt,
@@ -27,10 +33,12 @@ class MappingService:
         profile_repo: ProfileRepository | None = None,
         mapping_repo: LearnedMappingRepository | None = None,
         heuristics: HeuristicEngine | None = None,
+        cv_repo: CVRepository | None = None,
     ) -> None:
         self.profile_repo = profile_repo or ProfileRepository()
         self.mapping_repo = mapping_repo or LearnedMappingRepository()
         self.heuristics = heuristics or HeuristicEngine()
+        self.cv_repo = cv_repo or CVRepository()
         self._rate_limiters: dict[str, TokenBucketRateLimiter] = {}
 
     def _rate_limiter_for(self, user: User) -> TokenBucketRateLimiter:
@@ -80,11 +88,42 @@ class MappingService:
         heur_out = self.heuristics.resolve(remaining, profile)
         for f in remaining:
             if f.field_id in heur_out:
-                resolved[f.field_id] = heur_out[f.field_id]
+                val = heur_out[f.field_id]
+                if val == _FILE_VALUE_SENTINEL:
+                    continue  # handled in stage 2b below
+                resolved[f.field_id] = val
                 counts.resolved_backend += 1
                 await ws_send(ProgressMsg(
-                    field_id=f.field_id, status="local", value=heur_out[f.field_id], confidence=0.9,
+                    field_id=f.field_id, status="local", value=val, confidence=0.9,
                 ))
+
+        # Stage 2b: resolve CV file fields with primary CV download URL
+        cv_fields = [f for f in fields if f.field_id not in resolved and heur_out.get(f.field_id) == _FILE_VALUE_SENTINEL]
+        if cv_fields:
+            cvs = await self.cv_repo.list_for_user(str(user.id))
+            primary = next((c for c in cvs if c.is_primary), cvs[0] if cvs else None)
+            if primary:
+                config = get_settings()
+                api_base = getattr(config, "public_url", None) or "http://localhost:8000"
+                for f in cv_fields:
+                    resolved[f.field_id] = {
+                        "__type": "cv_file",
+                        "url": f"{api_base}/api/v1/cvs/{primary.id}/file",
+                        "filename": primary.filename,
+                        "mime_type": primary.mime_type,
+                    }
+                    counts.resolved_backend += 1
+                    await ws_send(ProgressMsg(
+                        field_id=f.field_id, status="learned",
+                        value=primary.filename, confidence=0.95,
+                    ))
+            else:
+                for f in cv_fields:
+                    counts.failed += 1
+                    await ws_send(ProgressMsg(
+                        field_id=f.field_id, status="error",
+                        value=None,
+                    ))
 
         # Stage 3: custom answers cache
         still = [f for f in fields if f.field_id not in resolved]

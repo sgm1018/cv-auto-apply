@@ -9,9 +9,12 @@ let refreshToken: string | null = null;
 let cachedProfile: Profile | null = null;
 let cachedSettings: Settings | null = null;
 
-async function openSidebar(pendingFill = false) {
+async function openSidebar(pendingFill = false, sourceTabId?: number) {
   if (pendingFill) {
     await chrome.storage.session.set({ pendingFill: true });
+  }
+  if (sourceTabId) {
+    await chrome.storage.session.set({ sourceTabId });
   }
   // Close any existing popup window first
   const existing = await chrome.windows.getAll({ windowTypes: ["popup"] });
@@ -40,8 +43,8 @@ async function openSidebar(pendingFill = false) {
 }
 
 // Extension icon clicked → open sidebar
-chrome.action.onClicked.addListener(() => {
-  void openSidebar(false);
+chrome.action.onClicked.addListener((tab: chrome.tabs.Tab) => {
+  void openSidebar(false, tab.id);
 });
 
 async function loadTokens() {
@@ -167,7 +170,7 @@ chrome.runtime.onMessage.addListener((msg: Message, _sender, sendResponse) => {
         }
         case "TRIGGER_FILL": {
           // Banner button clicked → open sidebar with fill signal
-          void openSidebar(true);
+          void openSidebar(true, _sender.tab?.id);
           sendResponse({ ok: true });
           break;
         }
@@ -178,6 +181,31 @@ chrome.runtime.onMessage.addListener((msg: Message, _sender, sendResponse) => {
             sendResponse({ pending: true });
           } else {
             sendResponse({ pending: false });
+          }
+          break;
+        }
+        case "FETCH_CV_FILE": {
+          const url = msg.url as string;
+          if (!url) { sendResponse({ ok: false, error: "no url" }); break; }
+          await loadTokens();
+          try {
+            const res = await fetch(url, {
+              headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+            });
+            if (!res.ok) {
+              sendResponse({ ok: false, error: `HTTP ${res.status}` });
+              break;
+            }
+            const buffer = await res.arrayBuffer();
+            const bytes = Array.from(new Uint8Array(buffer));
+            let binary = "";
+            for (let i = 0; i < bytes.length; i++) {
+              binary += String.fromCharCode(bytes[i]);
+            }
+            const base64 = btoa(binary);
+            sendResponse({ ok: true, base64, filename: msg.filename, mimeType: msg.mimeType });
+          } catch (e) {
+            sendResponse({ ok: false, error: (e as Error).message });
           }
           break;
         }
