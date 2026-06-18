@@ -1,4 +1,4 @@
-# SmartCVapply
+# CV-auto-apply
 <div align="center">
   <img width="120" height="120" alt="SmartCVapply logo" src="QuickApply_logo.png" />
 </div>
