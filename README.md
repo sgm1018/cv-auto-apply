@@ -76,7 +76,19 @@ Every field goes through up to four stages until a value is found:
 | 3 | Custom user answers (per field, per domain) | Instant |
 | 4 | LLM fallback — configurable provider, daily limit, model selection | ~2–5s |
 
-![Resolution pipeline](docs/branding/screenshots/resolution-pipeline.svg)
+```mermaid
+flowchart LR
+    A[Field detected] --> B{Stage 1:<br/>Learned?}
+    B -->|Yes| C[✅ Resolved]
+    B -->|No| D{Stage 2a:<br/>Heuristics?}
+    D -->|Yes| C
+    D -->|No| E{Stage 2b:<br/>CV sentinel?}
+    E -->|Yes| C
+    E -->|No| F{Stage 3:<br/>Custom answer?}
+    F -->|Yes| C
+    F -->|No| G[Stage 4:<br/>LLM fallback<br/>~2-5s]
+    G --> C
+```
 
 ---
 
@@ -86,8 +98,6 @@ Two-strategy detection that works everywhere:
 
 - **Native forms**: standard `<form>` elements with inputs, selects, radios, and textareas.
 - **SPA containers**: detects form-like containers in React/Vue/Angular apps (AshbyHQ, Greenhouse, Lever) by scanning for common interaction patterns and polling for late-rendered fields.
-
-![SPA form detection](docs/branding/screenshots/spa-detection.svg)
 
 ---
 

@@ -1,7 +1,7 @@
 {
-  "name": "smartcvapply-extension",
+  "name": "cv-auto-apply-extension",
   "version": "0.1.0",
-  "description": "SmartCVapply Chrome extension - smart auto-fill for job applications",
+  "description": "cv-auto-apply Chrome extension - smart auto-fill for job applications",
   "private": true,
   "type": "module",
   "scripts": {

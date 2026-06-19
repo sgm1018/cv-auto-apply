@@ -242,7 +242,7 @@ function showBanner(_form: HTMLElement) {
     <div class="card">
       <div class="icon">CV</div>
       <div class="text">
-        <div class="title">SmartCVapply ready</div>
+        <div class="title">CV auto apply ready</div>
         <div class="sub">Form detected — review and apply in one click</div>
       </div>
       <button class="primary" id="apply">Review & Apply</button>

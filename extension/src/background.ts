@@ -223,5 +223,5 @@ chrome.runtime.onMessage.addListener((msg: Message, _sender, sendResponse) => {
 });
 
 chrome.runtime.onInstalled.addListener(() => {
-  console.log("[SmartCVapply] extension installed");
+  console.log("[cv-auto-apply] extension installed");
 });
