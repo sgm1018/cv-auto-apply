@@ -33,13 +33,13 @@ Instead of showing you another empty form, SmartCVapply detects the form the mom
 
 ## The Problem
 
-Job applications are repetitive. Every platform — Greenhouse, Lever, Ashby, Workday, LinkedIn, and hundreds of custom ATS — asks for the same information but names fields differently, structures them in unique layouts, and often hides them inside SPAs with no `<form>` tag.
+Job applications are repetitive. Every platform — Greenhouse, Lever, Workday, LinkedIn, and hundreds of custom ATS — asks for the same information but names fields differently, structures them in unique layouts, and often hides them inside SPAs with no `<form>` tag.
 
 | Problem | What Happens |
 |---|---|
 | Manual repetition | Typing name, email, phone, LinkedIn, GitHub, skills into identical fields across 20+ tabs. |
 | Inconsistent field naming | "First Name", "given-name", "fname", "nombre" — every site invents its own convention. |
-| SPA complexity | React apps like AshbyHQ store form definitions in `window.__appData` — no `<form>` HTML element to detect. |
+| SPA complexity | SPAs store form definitions in JS objects — no `<form>` HTML element to detect. |
 | CV re-upload | "Attach your CV" means finding the file, uploading it, and hoping the ATS parses it correctly every single time. |
 | Language switching | English forms and Spanish forms require the same data — but the field names are completely different. |
 
@@ -97,7 +97,7 @@ flowchart LR
 Two-strategy detection that works everywhere:
 
 - **Native forms**: standard `<form>` elements with inputs, selects, radios, and textareas.
-- **SPA containers**: detects form-like containers in React/Vue/Angular apps (AshbyHQ, Greenhouse, Lever) by scanning for common interaction patterns and polling for late-rendered fields.
+- **SPA containers**: detects form-like containers in React/Vue/Angular apps (Greenhouse, Lever) by scanning for common interaction patterns and polling for late-rendered fields.
 
 ---
 
@@ -266,7 +266,7 @@ Load unpacked in `chrome://extensions` → point to `extension/dist/`.
 1. Open the extension popup.
 2. Create an account.
 3. Follow the onboarding wizard (API key → CV upload → profile review).
-4. Navigate to any job application page (Greenhouse, Ashby, Lever, LinkedIn, etc.).
+4. Navigate to any job application page (Greenhouse, Lever, LinkedIn, etc.).
 5. The popup detects the form automatically → click "Review and apply."
 
 ---

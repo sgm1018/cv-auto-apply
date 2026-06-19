@@ -144,7 +144,13 @@ async function maybeTriggerFillFromContent() {
 
 async function getSourceTabId() {
   const stored = await chrome.storage.session.get("sourceTabId");
-  return stored.sourceTabId || null;
+  if (stored.sourceTabId) return stored.sourceTabId;
+  // Fallback: get the active tab in the last focused window
+  try {
+    const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+    if (tabs.length > 0) return tabs[0].id;
+  } catch (_e) { /* ignore */ }
+  return null;
 }
 
 async function scanCurrentTabForForms() {

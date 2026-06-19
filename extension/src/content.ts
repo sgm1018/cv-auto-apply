@@ -15,6 +15,11 @@ const FIELD_HINTS = [
   "nombre", "apellido", "apellidos", "correo", "telefono", "teléfono",
   "linkedin", "github", "portfolio", "location", "address", "dirección",
   "direccion", "ciudad", "pais", "país", "country", "city",
+  "apply", "application", "job", "position", "role", "work", "experience",
+  "education", "skill", "cover letter", "submit", "upload", "file",
+  "message", "comment", "additional", "info", "summary", "headline",
+  "current", "company", "title", "salary", "availability", "start date",
+  "linkedin profile", "website", "url", "social", "pronouns",
 ];
 
 const FORM_LIKE_ATTRS = /form|application|apply|questionnaire/i;
@@ -97,12 +102,13 @@ function findFormAncestor(el: HTMLElement): HTMLElement | null {
 }
 
 function shouldSuggest(fields: ExtractedField[]): boolean {
-  if (fields.length < 3) return false;
+  if (fields.length < 2) return false;
   for (const f of fields) {
-    const hay = `${f.label ?? ""} ${f.name ?? ""} ${f.placeholder ?? ""}`.toLowerCase();
+    const hay = `${f.label ?? ""} ${f.name ?? ""} ${f.placeholder ?? ""} ${f.id ?? ""}`.toLowerCase();
     if (FIELD_HINTS.some((h) => hay.includes(h))) return true;
   }
-  return false;
+  // Fallback: any group with 4+ fields is probably a form
+  return fields.length >= 4;
 }
 
 function extractFields(root: HTMLElement): ExtractedField[] {
