@@ -101,7 +101,7 @@ async def parse_cv(cv_id: str, user: User = Depends(get_current_user)) -> CVPars
         api_key = SettingsService().decrypt_api_key(user)
         parsed = await CVParserService.parse_with_llm(
             provider=user.settings.get("llm_provider", "deepseek"),
-            model=user.settings.get("llm_model", "deepseek-chat"),
+            model=user.settings.get("llm_model", "deepseek-v4-flash"),
             api_key=api_key,
             api_base=user.settings.get("ollama_base_url") or user.settings.get("custom_endpoint"),
             text=text,
@@ -154,7 +154,7 @@ async def _auto_parse_cv(cv: CV, user: User) -> None:
         api_key = SettingsService().decrypt_api_key(user)
         parsed = await CVParserService.parse_with_llm(
             provider=user.settings.get("llm_provider", "deepseek"),
-            model=user.settings.get("llm_model", "deepseek-chat"),
+            model=user.settings.get("llm_model", "deepseek-v4-flash"),
             api_key=api_key,
             api_base=user.settings.get("ollama_base_url") or user.settings.get("custom_endpoint"),
             text=text,

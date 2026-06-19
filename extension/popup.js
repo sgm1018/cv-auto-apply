@@ -8,6 +8,20 @@ function setStatus(el, text, kind) {
 function setStatusOk(el, text) { setStatus(el, text, "ok"); }
 function setStatusErr(el, text) { setStatus(el, text, "err"); }
 
+function updateModelSuggestions(provider, datalistId) {
+  var map = {
+    deepseek: ["deepseek-v4-flash", "deepseek-v4-pro"],
+    openai:    ["gpt-5.5", "gpt-5.4-mini", "o3", "o4-mini", "gpt-4.1", "gpt-4o", "gpt-4o-mini"],
+    anthropic: ["claude-sonnet-4-6", "claude-haiku-4-5", "claude-opus-4-5", "claude-sonnet-4-5", "claude-opus-4-1", "claude-opus-4", "claude-sonnet-4", "claude-3-haiku"],
+    ollama:    ["llama3", "mistral", "codellama", "mixtral"],
+    custom:    []
+  };
+  var list = map[provider] || [];
+  var dl = document.getElementById(datalistId);
+  if (!dl) return;
+  dl.innerHTML = list.map(function (m) { return '<option value="' + m + '">'; }).join("");
+}
+
 // Popup state
 const state = {
   authenticated: false,
@@ -143,26 +157,72 @@ async function maybeTriggerFillFromContent() {
 }
 
 async function getSourceTabId() {
-  const stored = await chrome.storage.session.get("sourceTabId");
-  if (stored.sourceTabId) return stored.sourceTabId;
-  // Fallback: get the active tab in the last focused window
+  const extUrl = chrome.runtime.getURL("");
+  const isRealTab = (t) => t && t.id && t.url && !t.url.startsWith(extUrl)
+    && !t.url.startsWith("chrome://") && !t.url.startsWith("about:")
+    && (t.windowType === undefined || t.windowType === "normal");
+
+  // Strategy 1: stored sourceTabId (set when icon was clicked)
   try {
-    const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-    if (tabs.length > 0) return tabs[0].id;
+    const stored = await chrome.storage.session.get("sourceTabId");
+    if (stored.sourceTabId) {
+      const tab = await chrome.tabs.get(stored.sourceTabId);
+      if (isRealTab(tab)) return stored.sourceTabId;
+    }
+  } catch (_e) { /* tab closed, fall through */ }
+
+  // Strategy 2: active tab in any normal window
+  try {
+    const tabs = await chrome.tabs.query({ active: true, windowType: "normal" });
+    const real = tabs.find(isRealTab);
+    if (real) {
+      await chrome.storage.session.set({ sourceTabId: real.id });
+      return real.id;
+    }
   } catch (_e) { /* ignore */ }
+
+  // Strategy 3: any tab in a normal window
+  try {
+    const tabs = await chrome.tabs.query({ windowType: "normal" });
+    const real = tabs.find(isRealTab);
+    if (real) {
+      await chrome.storage.session.set({ sourceTabId: real.id });
+      return real.id;
+    }
+  } catch (_e) { /* ignore */ }
+
+  // Strategy 4: all tabs (last resort)
+  const tabs = await chrome.tabs.query({});
+  for (const t of tabs) {
+    if (isRealTab(t)) {
+      await chrome.storage.session.set({ sourceTabId: t.id });
+      return t.id;
+    }
+  }
   return null;
 }
 
 async function scanCurrentTabForForms() {
   const tabId = await getSourceTabId();
   if (!tabId) return [];
+  // First attempt: content script already loaded
   try {
     const result = await chrome.tabs.sendMessage(tabId, { type: "GET_FORMS" });
-    if (result && result.forms && result.forms.length > 0) {
-      return result.forms;
-    }
+    if (result && result.forms) return result.forms;
+    return [];
   } catch (_e) {
-    // No content script on this tab
+    // Content script not loaded — inject it and retry
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        files: ["content.js"],
+      });
+      await new Promise(function (r) { setTimeout(r, 250); });
+      const result = await chrome.tabs.sendMessage(tabId, { type: "GET_FORMS" });
+      if (result && result.forms) return result.forms;
+    } catch (_e2) {
+      // Can't inject (chrome:// page, no permission, etc.)
+    }
   }
   return [];
 }
@@ -193,7 +253,7 @@ function applySettingsToUI() {
   const limitEl = document.getElementById("set-limit");
   if (limitEl) limitEl.value = String(s.llm_daily_limit);
   const provEl = document.getElementById("set-provider");
-  if (provEl) provEl.value = s.llm_provider;
+  if (provEl) { provEl.value = s.llm_provider; updateModelSuggestions(s.llm_provider, "model-suggestions"); }
   const modelEl = document.getElementById("set-model");
   if (modelEl) modelEl.value = s.llm_model;
   const ollamaEl = document.getElementById("set-ollama");
@@ -430,6 +490,17 @@ function wireEvents() {
     });
   }
 
+  // Onboarding provider change → toggle ollama/custom fields
+  const obProvider = document.getElementById("ob-provider");
+  if (obProvider) {
+    obProvider.addEventListener("change", function () {
+      const v = obProvider.value;
+      document.getElementById("ob-field-ollama-url").classList.toggle("hidden", v !== "ollama");
+      document.getElementById("ob-field-custom-endpoint").classList.toggle("hidden", v !== "custom");
+      updateModelSuggestions(v, "ob-model-suggestions");
+    });
+  }
+
   // Onboarding: test & save API key
   const obTestKey = document.getElementById("ob-test-key");
   if (obTestKey) {
@@ -442,19 +513,33 @@ function wireEvents() {
       }
       setStatus(status, "Testing...");
       const token = await getToken();
+      const provEl = document.getElementById("ob-provider");
+      const modelEl = document.getElementById("ob-model");
+      const body = { api_key: keyEl.value };
+      if (provEl) body.provider = provEl.value;
+      if (modelEl && modelEl.value) body.model = modelEl.value;
+      var ollamaUrl = document.getElementById("ob-ollama");
+      if (ollamaUrl && ollamaUrl.value) body.ollama_base_url = ollamaUrl.value;
+      var endpUrl = document.getElementById("ob-endpoint");
+      if (endpUrl && endpUrl.value) body.custom_endpoint = endpUrl.value;
       try {
         const testRes = await fetch("http://localhost:8000/api/v1/settings/llm/test", {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-          body: JSON.stringify({ api_key: keyEl.value }),
+          body: JSON.stringify(body),
         });
         const testData = await testRes.json();
         if (testData.ok) {
-          // Save the key
+          // Save the key + provider + model
+          var saveBody = { llm_api_key: keyEl.value };
+          if (provEl) saveBody.llm_provider = provEl.value;
+          if (modelEl && modelEl.value) saveBody.llm_model = modelEl.value;
+          if (ollamaUrl && ollamaUrl.value) saveBody.ollama_base_url = ollamaUrl.value;
+          if (endpUrl && endpUrl.value) saveBody.custom_endpoint = endpUrl.value;
           const saveRes = await fetch("http://localhost:8000/api/v1/settings", {
             method: "PATCH",
             headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-            body: JSON.stringify({ llm_api_key: keyEl.value }),
+            body: JSON.stringify(saveBody),
           });
           if (saveRes.ok) {
             setStatusOk(status, "\u2713 API key saved and verified");
@@ -465,13 +550,13 @@ function wireEvents() {
             });
             renderOnboarding();
           } else {
-            setStatusErr(status, "\u2717 Failed to save API key");
+            setStatusErr(status, "\u2717 Ocurri\u00f3 algo inesperado");
           }
         } else {
-          setStatusErr(status, "\u2717 " + (testData.message || "Connection failed"));
+          setStatusErr(status, "\u2717 Ocurri\u00f3 algo inesperado");
         }
       } catch (_e) {
-        setStatusErr(status, "\u2717 Cannot reach server");
+        setStatusErr(status, "\u2717 Ocurri\u00f3 algo inesperado");
       }
     });
   }
@@ -487,6 +572,11 @@ function wireEvents() {
         return;
       }
       const file = fileInput.files[0];
+      const obStep2Icon = document.getElementById("ob-step2-icon");
+      var savedIcon = "";
+      if (obStep2Icon) { savedIcon = obStep2Icon.innerHTML; obStep2Icon.innerHTML = '<span class="spinner"></span>'; }
+      function restoreIcon() { if (obStep2Icon && savedIcon) obStep2Icon.innerHTML = savedIcon; }
+      obUploadCv.disabled = true;
       setStatus(status, "Uploading...");
       const token = await getToken();
       try {
@@ -498,6 +588,7 @@ function wireEvents() {
           body: form,
         });
         if (!uploadRes.ok) {
+          restoreIcon(); obUploadCv.disabled = false;
           setStatusErr(status, "\u2717 Upload failed");
           return;
         }
@@ -512,13 +603,14 @@ function wireEvents() {
         const parseData = await parseRes.json();
         if (parseData.parse_status === "done") {
           setStatusOk(status, "\u2713 CV parsed successfully");
-          fileInput.value = "";
+          clearFileInput("ob-cv-file", "ob-cv-filename");
           state.stepsConfig = state.stepsConfig.map(function (s) {
             if (s.name === "cv") s.status = true;
             return s;
           });
           renderOnboarding();
         } else if (parseData.parse_status === "failed") {
+          restoreIcon(); obUploadCv.disabled = false;
           var errMsg = parseData.parse_error || "Parse failed";
           if (errMsg.indexOf("Authentication") >= 0 || errMsg.indexOf("InvalidKey") >= 0) {
             errMsg = "Missing or invalid API key";
@@ -531,12 +623,14 @@ function wireEvents() {
           pollLoop(pollCvId, token, status);
         }
       } catch (e) {
+        restoreIcon(); obUploadCv.disabled = false;
         setStatusErr(status, "\u2717 " + e.message);
       }
     });
   }
 
   async function pollLoop(cvId, token, statusEl) {
+    var obStep2Icon = document.getElementById("ob-step2-icon");
     for (var i = 0; i < 30; i++) {
       await new Promise(function (r) { setTimeout(r, 2000); });
       try {
@@ -547,8 +641,7 @@ function wireEvents() {
         var data = await res.json();
         if (data.parse_status === "done") {
           setStatusOk(statusEl, "\u2713 CV parsed successfully");
-          var fileInput = document.getElementById("ob-cv-file");
-          if (fileInput) fileInput.value = "";
+          clearFileInput("ob-cv-file", "ob-cv-filename");
           state.stepsConfig = state.stepsConfig.map(function (s) {
             if (s.name === "cv") s.status = true;
             return s;
@@ -556,11 +649,17 @@ function wireEvents() {
           renderOnboarding();
           return;
         } else if (data.parse_status === "failed") {
+          if (obStep2Icon) obStep2Icon.textContent = "2";
+          var obBtn = document.getElementById("ob-upload-cv");
+          if (obBtn) obBtn.disabled = false;
           setStatusErr(statusEl, "\u2717 " + (data.parse_error || "Parse failed"));
           return;
         }
       } catch (_e) { /* retry */ }
     }
+    if (obStep2Icon) obStep2Icon.textContent = "2";
+    var obBtn = document.getElementById("ob-upload-cv");
+    if (obBtn) obBtn.disabled = false;
     setStatusErr(statusEl, "\u2717 Parse timed out, retry later");
   }
 
@@ -653,6 +752,7 @@ function wireEvents() {
       if (fieldOllama) fieldOllama.classList.toggle("hidden", v !== "ollama");
       const fieldCustom = document.getElementById("field-custom-endpoint");
       if (fieldCustom) fieldCustom.classList.toggle("hidden", v !== "custom");
+      updateModelSuggestions(v, "model-suggestions");
     });
   }
 
@@ -786,9 +886,9 @@ function wireEvents() {
           body: JSON.stringify(body),
         });
         const data = await res.json();
-        setStatus(out, data.ok ? "\u2713 " + data.message : "\u2717 " + data.message, data.ok ? "ok" : "err");
+        setStatus(out, data.ok ? "\u2713 " + data.message : "\u2717 Ocurri\u00f3 algo inesperado", data.ok ? "ok" : "err");
       } catch (_e) {
-        setStatusErr(out, "\u2717 Cannot reach server");
+        setStatusErr(out, "\u2717 Ocurri\u00f3 algo inesperado");
       }
     });
   }
@@ -806,6 +906,8 @@ function wireEvents() {
       const file = fileInput.files[0];
       const btn = cvUploadBtn;
       btn.disabled = true;
+      var savedBtnHtml = btn.innerHTML;
+      btn.innerHTML = '<span class="spinner spinner-sm"></span> Uploading...';
       setStatus(status, "Uploading...");
       try {
         const token = await getToken();
@@ -819,7 +921,7 @@ function wireEvents() {
         if (res.ok) {
           const data = await res.json();
           setStatusOk(status, "\u2713 " + file.name + " uploaded");
-          fileInput.value = "";
+          clearFileInput("cv-file-input", "cv-filename");
           await loadCVs();
           // Auto-parse if this is the first CV
           var cvs = [];
@@ -830,8 +932,11 @@ function wireEvents() {
             cvs = await listRes.json();
           } catch (_e) { /* ignore */ }
           if (cvs.length <= 1) {
-            toast("Only CV \u2014 auto-parsing\u2026", "ok");
+            setStatus(status, "Parsing CV\u2026");
+            btn.innerHTML = '<span class="spinner spinner-sm"></span> Parsing\u2026';
             await parseCV(data.cv_id, token);
+            setStatusOk(status, "\u2713 " + file.name + " parsed");
+            btn.innerHTML = savedBtnHtml;
             await loadCVs();
           }
         } else {
@@ -842,6 +947,7 @@ function wireEvents() {
         setStatusErr(status, "\u2717 " + e.message);
       } finally {
         btn.disabled = false;
+        btn.innerHTML = savedBtnHtml;
       }
     });
   }
@@ -940,14 +1046,21 @@ function wireEvents() {
     });
   }
 
-  // Footer help
-  const footerHelp = document.getElementById("footer-help");
-  if (footerHelp) {
-    footerHelp.addEventListener("click", function (e) {
-      e.preventDefault();
-      chrome.tabs.create({ url: "http://localhost:8000/docs" });
+  // File input filename display + auto-upload on selection
+  function setupFileInput(inputId, nameId, triggerBtnId) {
+    var input = document.getElementById(inputId);
+    var name = document.getElementById(nameId);
+    if (!input || !name) return;
+    input.addEventListener("change", function () {
+      name.textContent = (input.files && input.files[0]) ? input.files[0].name : "";
+      if (input.files && input.files[0]) {
+        var btn = document.getElementById(triggerBtnId);
+        if (btn) btn.click();
+      }
     });
   }
+  setupFileInput("ob-cv-file", "ob-cv-filename", "ob-upload-cv");
+  setupFileInput("cv-file-input", "cv-filename", "cv-upload-btn");
 }
 
 async function saveSettings() {
@@ -1011,11 +1124,10 @@ async function saveLLMSettings() {
       var ov = document.getElementById("view-onboarding");
       if (ov && ov.classList.contains("active")) renderOnboarding();
     } else {
-      const body = await res.json().catch(function () { return {}; });
-      flashStatus(body.message || "Save failed", "err");
+      flashStatus("Ocurri\u00f3 algo inesperado", "err");
     }
   } catch (_e) {
-    flashStatus("Save failed", "err");
+    flashStatus("Ocurri\u00f3 algo inesperado", "err");
   }
 }
 
@@ -1452,6 +1564,13 @@ function collectExpCards() {
     });
   }
   return result;
+}
+
+function clearFileInput(inputId, nameId) {
+  var input = document.getElementById(inputId);
+  var name = document.getElementById(nameId);
+  if (input) input.value = "";
+  if (name) name.textContent = "";
 }
 
 function escapeHtml(s) {

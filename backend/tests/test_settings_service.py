@@ -11,7 +11,7 @@ async def test_get_returns_defaults(mongo_db: None) -> None:
     user = await UserRepository().create(email="a@b.com", password_hash="x", settings={})
     out = await SettingsService().get(user)
     assert out["llm_provider"] == "deepseek"
-    assert out["llm_model"] == "deepseek-chat"
+    assert out["llm_model"] == "deepseek-v4-flash"
     assert out["llm_api_key_set"] is False
 
 

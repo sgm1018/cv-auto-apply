@@ -194,6 +194,37 @@
     }
     textarea.input { resize: vertical; min-height: 60px; }
 
+    /* file upload (styled trigger over hidden input) */
+    .file-upload {
+      position: relative;
+      margin-bottom: 8px;
+    }
+    .file-upload-input {
+      position: absolute; inset: 0; z-index: 2;
+      opacity: 0; cursor: pointer;
+      width: 100%; height: 100%;
+    }
+    .file-upload-box {
+      display: flex; align-items: center; gap: 8px;
+      padding: 12px 14px;
+      border: 1.5px dashed var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg);
+      color: var(--text-soft);
+      font-size: 13px;
+      transition: border-color 0.15s var(--ease), background 0.15s var(--ease);
+    }
+    .file-upload-box:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+    .file-upload-box svg {
+      flex-shrink: 0;
+      color: var(--accent);
+    }
+    .file-upload-label { flex: 1; }
+    .file-upload-name { color: var(--text); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
+
     /* ------------------------------------------------------------------
        Buttons
        ------------------------------------------------------------------ */
@@ -516,6 +547,17 @@
     .text-sm { font-size: 12px; }
     .text-xs { font-size: 11px; }
 
+    /* spinner */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      display: inline-block; width: 14px; height: 14px;
+      border: 2px solid var(--text-muted); border-top-color: var(--text);
+      border-radius: 50%; animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+    }
+    .spinner-sm { width: 12px; height: 12px; border-width: 1.5px; }
+    .btn .spinner { border-top-color: #fff; border-color: rgba(255,255,255,0.4); }
+
     /* password eye toggle */
     .pw-wrap { position: relative; }
     .pw-wrap .input { padding-right: 34px; }
@@ -612,7 +654,7 @@
             <label class="label" for="password">Password</label>
             <div class="pw-wrap">
               <input class="input" id="password" type="password" placeholder="Min 12 characters" autocomplete="current-password" required minlength="12" />
-              <button class="pw-eye" type="button" data-toggle="password" title="Show password">&#128065;</button>
+              <button class="pw-eye" type="button" data-toggle="password" title="Show password" tabindex="-1">&#128065;</button>
             </div>
           </div>
           <button class="btn btn-primary mt-8" type="submit">
@@ -645,14 +687,14 @@
             <label class="label" for="reg-password">Password</label>
             <div class="pw-wrap">
               <input class="input" id="reg-password" type="password" placeholder="Min 12 characters" autocomplete="new-password" required minlength="12" />
-              <button class="pw-eye" type="button" data-toggle="reg-password" title="Show password">&#128065;</button>
+              <button class="pw-eye" type="button" data-toggle="reg-password" title="Show password" tabindex="-1">&#128065;</button>
             </div>
           </div>
           <div class="field">
             <label class="label" for="reg-confirm">Confirm password</label>
             <div class="pw-wrap">
               <input class="input" id="reg-confirm" type="password" placeholder="Min 12 characters" autocomplete="new-password" required minlength="12" />
-              <button class="pw-eye" type="button" data-toggle="reg-confirm" title="Show password">&#128065;</button>
+              <button class="pw-eye" type="button" data-toggle="reg-confirm" title="Show password" tabindex="-1">&#128065;</button>
             </div>
           </div>
           <button class="btn btn-primary mt-8" type="submit">
@@ -687,10 +729,48 @@
             <label class="label" for="ob-key">API key</label>
             <div class="pw-wrap">
               <input class="input" id="ob-key" type="password" placeholder="sk-..." />
-              <button class="pw-eye" type="button" data-toggle="ob-key" title="Show">&#128065;</button>
+              <button class="pw-eye" type="button" data-toggle="ob-key" title="Show" tabindex="-1">&#128065;</button>
             </div>
           </div>
-          <button class="btn btn-ghost btn-sm" id="ob-test-key">Test &amp; save</button>
+          <div class="row" style="gap:8px; margin-top:8px;">
+            <div class="field flex-1">
+              <label class="label text-xs" for="ob-provider">Provider</label>
+              <select class="input" id="ob-provider">
+                <option value="deepseek">DeepSeek</option>
+                <option value="openai">OpenAI</option>
+                <option value="anthropic">Anthropic</option>
+                <option value="ollama">Ollama (local)</option>
+                <option value="custom">Custom endpoint</option>
+              </select>
+            </div>
+            <div class="field flex-1">
+              <label class="label text-xs" for="ob-model">Model</label>
+              <input class="input" id="ob-model" type="text" list="ob-model-suggestions" placeholder="deepseek-v4-flash" autocomplete="off" />
+              <datalist id="ob-model-suggestions">
+                <option value="deepseek-v4-flash">
+                <option value="deepseek-v4-pro">
+                <option value="gpt-5.5">
+                <option value="gpt-5.4-mini">
+                <option value="o3">
+                <option value="o4-mini">
+                <option value="gpt-4.1">
+                <option value="gpt-4o">
+                <option value="gpt-4o-mini">
+                <option value="claude-sonnet-4-6">
+                <option value="claude-haiku-4-5">
+                <option value="claude-opus-4-5">
+              </datalist>
+            </div>
+          </div>
+          <div class="field hidden" id="ob-field-ollama-url" style="margin-top:4px;">
+            <label class="label text-xs" for="ob-ollama">Ollama base URL</label>
+            <input class="input" id="ob-ollama" type="text" placeholder="http://localhost:11434/v1" />
+          </div>
+          <div class="field hidden" id="ob-field-custom-endpoint" style="margin-top:4px;">
+            <label class="label text-xs" for="ob-endpoint">Custom endpoint</label>
+            <input class="input" id="ob-endpoint" type="text" placeholder="https://..." />
+          </div>
+          <button class="btn btn-ghost btn-sm" style="margin-top:8px;" id="ob-test-key">Test &amp; save</button>
           <p class="muted text-xs" style="margin-top:8px; min-height:14px;" id="ob-key-status"></p>
         </div>
 
@@ -705,8 +785,13 @@
           </div>
         </div>
         <div class="ob-body hidden" id="ob-step2-body">
-          <div class="field">
-            <input class="input" id="ob-cv-file" type="file" accept=".pdf,.docx" />
+          <div class="file-upload">
+            <input class="file-upload-input" id="ob-cv-file" type="file" accept=".pdf,.docx" />
+            <div class="file-upload-box">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <span class="file-upload-label">Choose a PDF or DOCX</span>
+              <span class="file-upload-name" id="ob-cv-filename"></span>
+            </div>
           </div>
           <button class="btn btn-primary btn-sm" id="ob-upload-cv">Upload &amp; parse</button>
           <p class="muted text-xs" style="margin-top:8px; min-height:14px;" id="ob-cv-status"></p>
@@ -946,13 +1031,27 @@
           </div>
           <div class="field">
             <label class="label" for="set-model">Model</label>
-            <input class="input" id="set-model" type="text" placeholder="deepseek-chat" />
+            <input class="input" id="set-model" type="text" list="model-suggestions" placeholder="deepseek-v4-flash" autocomplete="off" />
+            <datalist id="model-suggestions">
+              <option value="deepseek-v4-flash" label="DeepSeek V4 Flash">
+              <option value="deepseek-v4-pro" label="DeepSeek V4 Pro">
+              <option value="gpt-5.5" label="OpenAI GPT-5.5">
+              <option value="gpt-5.4-mini" label="OpenAI GPT-5.4 Mini">
+              <option value="o3" label="OpenAI o3">
+              <option value="o4-mini" label="OpenAI o4-mini">
+              <option value="gpt-4.1" label="OpenAI GPT-4.1">
+              <option value="gpt-4o" label="OpenAI GPT-4o">
+              <option value="gpt-4o-mini" label="OpenAI GPT-4o Mini">
+              <option value="claude-sonnet-4-6" label="Claude Sonnet 4">
+              <option value="claude-haiku-4-5" label="Claude Haiku 4.5">
+              <option value="claude-opus-4-5" label="Claude Opus 4.5">
+            </datalist>
           </div>
           <div class="field">
             <label class="label" for="set-key">API key <span class="muted" id="set-key-status"></span></label>
             <div class="pw-wrap">
               <input class="input" id="set-key" type="password" placeholder="Leave blank to keep current" />
-              <button class="pw-eye" type="button" data-toggle="set-key" title="Show API key">&#128065;</button>
+              <button class="pw-eye" type="button" data-toggle="set-key" title="Show API key" tabindex="-1">&#128065;</button>
             </div>
           </div>
           <div class="field" id="field-ollama-url">
@@ -972,9 +1071,13 @@
 
         <div id="tab-cvs" class="tab-panel hidden">
           <div>
-            <div class="field">
-              <label class="label" for="cv-file-input">Upload new CV</label>
-              <input class="input" id="cv-file-input" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+            <div class="file-upload">
+              <input class="file-upload-input" id="cv-file-input" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+              <div class="file-upload-box">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <span class="file-upload-label">Upload new CV</span>
+                <span class="file-upload-name" id="cv-filename"></span>
+              </div>
             </div>
             <button class="btn btn-primary" id="cv-upload-btn">
               Upload

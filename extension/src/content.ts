@@ -27,12 +27,12 @@ const FORM_LIKE_TAGS = new Set(["div", "section", "article", "fieldset", "main",
 
 // ── Detection ──────────────────────────────────────────────────────
 
-function detectForms(): FormDetection[] {
+function detectForms(force = false): FormDetection[] {
   const out: FormDetection[] = [];
 
   // Strategy 1: native <form> elements
   for (const form of document.querySelectorAll<HTMLFormElement>("form")) {
-    if (form.dataset.cvaSeen) continue;
+    if (!force && form.dataset.cvaSeen) continue;
     const fields = extractFields(form);
     if (shouldSuggest(fields)) {
       form.dataset.cvaSeen = "1";
@@ -42,7 +42,7 @@ function detectForms(): FormDetection[] {
 
   // Strategy 2: SPA containers that look like forms (no <form> tag)
   for (const container of findFormContainers()) {
-    if (container.dataset.cvaSeen) continue;
+    if (!force && container.dataset.cvaSeen) continue;
     if (container.tagName === "FORM") continue; // already handled above
     const fields = extractFields(container);
     if (shouldSuggest(fields)) {
@@ -360,7 +360,17 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return true;
   }
   if (msg?.type === "GET_FORMS") {
-    const forms = detectedForms.map((d) => ({
+    // Fresh scan ignoring data-cva-seen — guarantees same results as auto-detection
+    const fresh = detectForms(true);
+    // Cache + banner for any forms not yet shown
+    const seen = new Set(detectedForms.map(d => d.form));
+    for (const d of fresh) {
+      if (!seen.has(d.form)) {
+        detectedForms.push(d);
+        showBanner(d.form);
+      }
+    }
+    const forms = fresh.map((d) => ({
       domain: window.location.hostname,
       fields: d.fields,
     }));

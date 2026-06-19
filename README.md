@@ -43,7 +43,7 @@ Job applications are repetitive. Every platform — Greenhouse, Lever, Workday, 
 | CV re-upload | "Attach your CV" means finding the file, uploading it, and hoping the ATS parses it correctly every single time. |
 | Language switching | English forms and Spanish forms require the same data — but the field names are completely different. |
 
-SmartCVapply solves this with a **multi-stage resolution engine** that combines learned mappings, heuristic keyword matching (with English + Spanish support + accent normalization), an LLM gateway for ambiguous fields, and encrypted CV file relay — all from a keyboard-first popup.
+SmartCVapply solves this with a **multi-stage resolution engine** that combines learned mappings, heuristic keyword matching (with English + Spanish support + accent normalization), an LLM gateway for ambiguous fields, and encrypted CV file relay — all from a popup that opens automatically when you land on a new form.
 
 ---
 
@@ -124,7 +124,7 @@ Word-boundary regex: "name" matches "Full Name" but NOT "surname"
 
 ---
 
-### Keyboard-First Popup
+### Automatic Popup
 
 The extension opens as a separate popup window (not `default_popup`) so it stays open while you interact with the page. Every action is one or two clicks away:
 
