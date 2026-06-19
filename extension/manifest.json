@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "SmartCVapply",
+  "name": "cv-auto-apply",
   "version": "0.1.0",
-  "description": "Smart auto-fill for job application forms — learns with every use.",
+  "description": "Auto-fill job application forms with one keystroke.",
   "action": {
-    "default_title": "SmartCVapply",
+    "default_title": "cv-auto-apply",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",

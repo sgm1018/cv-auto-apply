@@ -2,7 +2,7 @@
 import type { ExtractedField, FieldValue } from "./types.js";
 
 const API_BASE = "http://localhost:8000";
-const BANNER_ID = "__smartcvapply_banner__";
+const BANNER_ID = "__cva_banner__";
 
 interface FormDetection {
   form: HTMLElement;
@@ -27,21 +27,21 @@ function detectForms(): FormDetection[] {
 
   // Strategy 1: native <form> elements
   for (const form of document.querySelectorAll<HTMLFormElement>("form")) {
-    if (form.dataset.smartcvapplySeen) continue;
+    if (form.dataset.cvaSeen) continue;
     const fields = extractFields(form);
     if (shouldSuggest(fields)) {
-      form.dataset.smartcvapplySeen = "1";
+      form.dataset.cvaSeen = "1";
       out.push({ form, fields, detectedAt: Date.now() });
     }
   }
 
   // Strategy 2: SPA containers that look like forms (no <form> tag)
   for (const container of findFormContainers()) {
-    if (container.dataset.smartcvapplySeen) continue;
+    if (container.dataset.cvaSeen) continue;
     if (container.tagName === "FORM") continue; // already handled above
     const fields = extractFields(container);
     if (shouldSuggest(fields)) {
-      container.dataset.smartcvapplySeen = "1";
+      container.dataset.cvaSeen = "1";
       out.push({ form: container, fields, detectedAt: Date.now() });
     }
   }
