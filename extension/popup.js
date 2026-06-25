@@ -134,7 +134,8 @@ async function boot() {
   } else {
     showView("login");
     wireEvents();
-    await maybeTriggerFillFromContent();
+    // Don't consume pendingFill while unauthenticated — it will be
+    // handled in maybeTriggerFillFromContent after successful login.
   }
 }
 
@@ -262,6 +263,8 @@ function applySettingsToUI() {
   if (endpEl) endpEl.value = s.custom_endpoint || "";
   const keyStatus = document.getElementById("set-key-status");
   if (keyStatus) keyStatus.textContent = s.llm_api_key_set ? "(set)" : "";
+  const formDetectEl = document.getElementById("set-form-detection");
+  if (formDetectEl) formDetectEl.checked = s.form_detection_enabled !== false;
   const emailDisplay = document.getElementById("set-email-display");
   if (emailDisplay) emailDisplay.textContent = "Signed in as: " + (state.email || "—");
   // Toggle conditional fields
@@ -1028,9 +1031,76 @@ function wireEvents() {
         toast("No source tab found", "err");
         return;
       }
+
+      // Build the final mapping: start with backend mapping, then overlay user edits
+      const finalMapping = Object.assign({}, state.fillSession.mapping || {});
+      const edits = state.fillSession.edits || {};
+      const aiFields = [];
+
+      for (const fid of Object.keys(edits)) {
+        const e = edits[fid];
+        if (!e) continue;
+        if (e.useAI) {
+          // Find the original field schema to send to LLM
+          const f = (state.fields || []).find(function (x) { return x.field_id === fid; });
+          if (f) {
+            aiFields.push({
+              field_id: fid,
+              label: f.label,
+              name: f.name,
+              type: f.type,
+              placeholder: f.placeholder,
+              options: f.options,
+              notes: e.notes || "",
+              current_value: e.value || null,
+            });
+          }
+          // Clear from mapping — will be filled by LLM response
+          delete finalMapping[fid];
+        } else if (e.value) {
+          // Manual edit overrides backend value
+          finalMapping[fid] = { value: e.value, source: "local" };
+        }
+      }
+
+      // Batch-generate AI fields if any
+      if (aiFields.length > 0) {
+        fillApply.disabled = true;
+        const savedHtml = fillApply.innerHTML;
+        fillApply.innerHTML = '<span class="spinner spinner-sm"></span> Generating\u2026';
+        try {
+          const token = await getToken();
+          const res = await fetch("http://localhost:8000/api/v1/llm/batch-generate", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: "Bearer " + token,
+            },
+            body: JSON.stringify({ fields: aiFields }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const llmMapping = data.mapping || {};
+            for (const fid of Object.keys(llmMapping)) {
+              finalMapping[fid] = { value: llmMapping[fid], source: "llm" };
+              // Reflect in the row
+              applyResolvedToRow(fid, { [fid]: { value: llmMapping[fid], source: "llm" } });
+            }
+          } else {
+            toast("AI generation failed \u2014 applying without AI fields", "err");
+          }
+        } catch (e) {
+          toast("AI error: " + e.message, "err");
+        } finally {
+          fillApply.disabled = false;
+          fillApply.innerHTML = savedHtml;
+        }
+      }
+
+      // Apply to the page
       await chrome.tabs.sendMessage(tabId, {
         type: "APPLY_MAPPING",
-        mapping: state.fillSession.mapping,
+        mapping: finalMapping,
       });
       toast("Applied to page", "ok");
       showView("main");
@@ -1042,6 +1112,7 @@ function wireEvents() {
   if (fillCancel) {
     fillCancel.addEventListener("click", function () {
       state.fillSession = null;
+      state.fields = [];
       showView("main");
     });
   }
@@ -1067,10 +1138,12 @@ async function saveSettings() {
   const langEl = document.getElementById("set-language");
   const modeEl = document.getElementById("set-mode");
   const limitEl = document.getElementById("set-limit");
+  const formDetectEl = document.getElementById("set-form-detection");
   const patch = {
     language: langEl ? langEl.value : "en",
     autofill_mode: modeEl ? modeEl.value : "review",
     llm_daily_limit: Number(limitEl ? limitEl.value : 100),
+    form_detection_enabled: formDetectEl ? formDetectEl.checked : true,
   };
   const token = await getToken();
   try {
@@ -1328,11 +1401,102 @@ function flashStatus(text, kind) {
 }
 
 // ---------- FILL SESSION ----------
+function renderFillRow(f) {
+  const label = f.label || f.name || f.id || "(unnamed)";
+  const meta = [f.type, f.name && f.name !== label ? f.name : null, f.placeholder]
+    .filter(Boolean).join(" \u00b7 ");
+  return (
+    '<div class="fill-list-item" data-id="' + f.field_id + '">' +
+      '<div class="fill-list-head">' +
+        '<svg class="fill-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>' +
+        '<span class="fill-name">' + escapeHtml(label) +
+          (meta ? '<span class="fill-meta">' + escapeHtml(meta) + '</span>' : '') +
+        '</span>' +
+        '<span class="badge skip" data-status>pending</span>' +
+      '</div>' +
+      '<div class="fill-list-body">' +
+        '<textarea class="fill-value-input" data-value rows="1" placeholder="Value\u2026"></textarea>' +
+        '<label class="fill-ai-row">' +
+          '<span class="fill-ai-label">Generate with AI</span>' +
+          '<span class="fill-toggle">' +
+            '<input type="checkbox" data-ai />' +
+            '<span class="fill-toggle-track"><span class="fill-toggle-thumb"></span></span>' +
+          '</span>' +
+        '</label>' +
+        '<div class="fill-notes-wrap">' +
+          '<span class="fill-notes-label">Notes for AI</span>' +
+          '<textarea class="fill-value-input textarea" data-notes rows="2" placeholder="e.g. friendly tone, mention 5 years of experience\u2026"></textarea>' +
+        '</div>' +
+      '</div>' +
+    '</div>'
+  );
+}
+
+function getFillEdit(fieldId) {
+  if (!state.fillSession) return null;
+  if (!state.fillSession.edits) state.fillSession.edits = {};
+  if (!state.fillSession.edits[fieldId]) {
+    state.fillSession.edits[fieldId] = { value: "", useAI: false, notes: "" };
+  }
+  return state.fillSession.edits[fieldId];
+}
+
+function setFillEdit(fieldId, patch) {
+  const edit = getFillEdit(fieldId);
+  Object.assign(edit, patch);
+  updateApplyButton();
+}
+
+function applyResolvedToRow(fieldId, mapping) {
+  const item = document.querySelector('.fill-list-item[data-id="' + fieldId + '"]');
+  if (!item) return;
+  const entry = mapping[fieldId];
+  let value = null;
+  let source = "skipped";
+  if (entry && typeof entry === "object" && "value" in entry) {
+    value = entry.value;
+    source = entry.source || "skipped";
+  } else if (entry !== undefined && entry !== null) {
+    value = entry;
+    source = "backend";
+  }
+  const edit = getFillEdit(fieldId);
+  const ta = item.querySelector("[data-value]");
+  const resolved = value !== null && value !== undefined && value !== "";
+  // Only auto-fill if user hasn't typed anything yet
+  if (ta && edit.value === "" && resolved) {
+    edit.value = String(value);
+    ta.value = edit.value;
+  } else if (ta && edit.value === "" && !resolved) {
+    ta.value = "";
+  } else if (ta) {
+    ta.value = edit.value;
+  }
+  const badge = item.querySelector("[data-status]");
+  if (badge) {
+    badge.className = "badge " + (resolved ? source : "skip");
+    badge.textContent = resolved ? source : "skipped";
+  }
+  updateProgress();
+}
+
+function updateApplyButton() {
+  const fillApply = document.getElementById("fill-apply");
+  if (!fillApply || !state.fillSession) return;
+  const edits = state.fillSession.edits || {};
+  const hasAny = Object.keys(edits).some(function (id) {
+    const e = edits[id];
+    return e && (e.value || e.useAI);
+  });
+  fillApply.disabled = !hasAny && !Object.keys(state.fillSession.mapping || {}).length;
+}
+
 async function startFillSession(form) {
   state.fillSession = {
     domain: form.domain,
     fields: form.fields,
     mapping: {},
+    edits: {},
   };
   state.fields = form.fields;
   showView("fill");
@@ -1341,22 +1505,35 @@ async function startFillSession(form) {
 
   const list = document.getElementById("fill-list");
   if (!list) return;
-  list.innerHTML = form.fields
-    .map(function (f) {
-      return (
-        "<div class=\"field-row\" data-id=\"" + f.field_id + "\">" +
-          "<span class=\"name\">" + escapeHtml(f.label || f.name || f.id) + "</span>" +
-          "<span class=\"badge skip\" data-status>pending</span>" +
-        "</div>"
-      );
-    })
-    .join("");
+  list.innerHTML = form.fields.map(renderFillRow).join("");
+
+  // Wire row interactions
+  for (const item of list.querySelectorAll(".fill-list-item")) {
+    const head = item.querySelector(".fill-list-head");
+    head.addEventListener("click", function () {
+      item.classList.toggle("expanded");
+    });
+    const fieldId = item.dataset.id;
+    const valueTa = item.querySelector("[data-value]");
+    valueTa.addEventListener("input", function () {
+      setFillEdit(fieldId, { value: valueTa.value });
+    });
+    const aiCb = item.querySelector("[data-ai]");
+    aiCb.addEventListener("change", function () {
+      item.classList.toggle("ai-on", aiCb.checked);
+      setFillEdit(fieldId, { useAI: aiCb.checked });
+    });
+    const notesTa = item.querySelector("[data-notes]");
+    notesTa.addEventListener("input", function () {
+      setFillEdit(fieldId, { notes: notesTa.value });
+    });
+  }
 
   // Open WebSocket to backend
   const token = await getToken();
   if (!token) {
     toast("Please sign in first", "err");
-    showView("main");
+    showView("login");
     return;
   }
   const ws = new WebSocket("ws://localhost:8000/api/v1/ws/fill?token=" + encodeURIComponent(token));
@@ -1373,20 +1550,16 @@ async function startFillSession(form) {
   ws.onmessage = function (ev) {
     const msg = JSON.parse(ev.data);
     if (msg.type === "FILL_PROGRESS") {
-      const row = list.querySelector("[data-id=\"" + msg.field_id + "\"]");
-      if (row) {
-        const badge = row.querySelector("[data-status]");
-        if (badge) {
-          badge.className = "badge " + msg.status;
-          badge.textContent = msg.status;
-        }
-      }
-      updateProgress();
+      applyResolvedToRow(msg.field_id, { [msg.field_id]: { value: msg.value, source: msg.status } });
     } else if (msg.type === "FILL_COMPLETE") {
-      state.fillSession.mapping = msg.mapping;
-      const fillApply = document.getElementById("fill-apply");
-      if (fillApply) fillApply.disabled = false;
-      flashSummary("Ready — " + Object.keys(msg.mapping).length + " fields resolved");
+      state.fillSession.mapping = msg.mapping || {};
+      // NO re-aplicar a las filas — los FILL_PROGRESS individuales ya
+      // actualizaron cada campo con su fuente correcta (learned, local, etc).
+      // FILL_COMPLETE manda valores planos sin fuente, y applyResolvedToRow
+      // interpreta cualquier valor plano como "llm", pisando el badge real.
+      updateProgress();
+      updateApplyButton();
+      flashSummary("Ready \u2014 click any field to edit or mark for AI");
       ws.close();
     }
   };
@@ -1400,10 +1573,12 @@ function updateProgress() {
   var resolved = 0;
   for (var i = 0; i < state.fields.length; i++) {
     const f = state.fields[i];
-    const row = document.querySelector("[data-id=\"" + f.field_id + "\"]");
+    const row = document.querySelector('.fill-list-item[data-id="' + f.field_id + '"]');
     if (row) {
       const badge = row.querySelector("[data-status]");
-      if (badge && ["pending", "skipped", "error"].indexOf(badge.textContent) === -1) {
+      const edit = state.fillSession && state.fillSession.edits && state.fillSession.edits[f.field_id];
+      const hasValue = edit && (edit.value || edit.useAI);
+      if (hasValue || (badge && ["pending", "skipped", "error"].indexOf(badge.textContent) === -1)) {
         resolved++;
       }
     }
@@ -1412,7 +1587,15 @@ function updateProgress() {
   const progressFill = document.getElementById("fill-progress");
   if (progressFill) progressFill.style.width = pct + "%";
   const summary = document.getElementById("fill-summary");
-  if (summary) summary.textContent = "Resolving " + resolved + " / " + total + " fields\u2026";
+  if (summary) {
+    const edits = state.fillSession && state.fillSession.edits ? Object.values(state.fillSession.edits) : [];
+    const aiCount = edits.filter(function (e) { return e && e.useAI; }).length;
+    if (aiCount > 0) {
+      summary.textContent = resolved + " / " + total + " ready \u00b7 " + aiCount + " queued for AI";
+    } else {
+      summary.textContent = "Resolving " + resolved + " / " + total + " fields\u2026";
+    }
+  }
 }
 
 function flashSummary(text) {

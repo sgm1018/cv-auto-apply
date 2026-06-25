@@ -463,6 +463,123 @@
     .field-row:last-child { border-bottom: none; }
     .field-row .name { color: var(--text-soft); flex: 1; }
 
+    /* fill view — full-height list with expandable rows */
+    #view-fill.active { min-height: 0; }
+    .fill-card {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 0 14px;
+      display: flex;
+      flex-direction: column;
+    }
+    .fill-actions {
+      flex-shrink: 0;
+      padding: 12px 0 4px;
+      border-top: 1px solid var(--surface);
+      background: var(--bg);
+    }
+    .fill-list-item {
+      border-bottom: 1px solid var(--surface);
+      font-size: 13px;
+    }
+    .fill-list-item:last-child { border-bottom: none; }
+    .fill-list-head {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 0;
+      cursor: pointer;
+      user-select: none;
+    }
+    .fill-list-head:hover .fill-chevron { color: var(--accent); }
+    .fill-list-head .fill-name {
+      flex: 1; min-width: 0;
+      color: var(--text); font-weight: 500;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .fill-list-head .fill-name .fill-meta {
+      display: block; font-weight: 400;
+      font-size: 11px; color: var(--text-faint);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .fill-chevron {
+      width: 14px; height: 14px;
+      color: var(--text-muted);
+      transition: transform 0.18s var(--ease);
+      flex-shrink: 0;
+    }
+    .fill-list-item.expanded .fill-chevron { transform: rotate(90deg); }
+    .fill-list-body {
+      display: none;
+      padding: 4px 0 12px 22px;
+      flex-direction: column; gap: 8px;
+    }
+    .fill-list-item.expanded .fill-list-body { display: flex; }
+    .fill-value-input {
+      width: 100%;
+      padding: 7px 9px;
+      font-size: 12px; font-family: inherit;
+      color: var(--text);
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      outline: none;
+      resize: vertical;
+      min-height: 30px;
+      transition: border-color 0.15s var(--ease);
+    }
+    .fill-value-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(59, 95, 231, 0.12);
+    }
+    .fill-value-input.textarea { min-height: 60px; }
+    .fill-ai-row {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12px; color: var(--text-soft);
+      cursor: pointer;
+      user-select: none;
+    }
+    .fill-ai-row .fill-ai-label { flex: 1; }
+    /* iOS-style toggle */
+    .fill-toggle {
+      position: relative;
+      width: 32px; height: 18px;
+      flex-shrink: 0;
+    }
+    .fill-toggle input {
+      position: absolute; opacity: 0; width: 0; height: 0;
+      pointer-events: none;
+    }
+    .fill-toggle .fill-toggle-track {
+      position: absolute; inset: 0;
+      background: var(--border);
+      border-radius: 9px;
+      transition: background 0.18s var(--ease);
+    }
+    .fill-toggle .fill-toggle-thumb {
+      position: absolute;
+      top: 2px; left: 2px;
+      width: 14px; height: 14px;
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+      transition: transform 0.18s var(--ease);
+    }
+    .fill-toggle input:checked + .fill-toggle-track {
+      background: var(--accent);
+    }
+    .fill-toggle input:checked + .fill-toggle-track .fill-toggle-thumb {
+      transform: translateX(14px);
+    }
+    .fill-notes-wrap {
+      display: none;
+      flex-direction: column; gap: 4px;
+    }
+    .fill-list-item.ai-on .fill-notes-wrap { display: flex; }
+    .fill-notes-label {
+      font-size: 11px; font-weight: 600;
+      color: var(--text-soft);
+    }
+
     .badge {
       display: inline-flex; align-items: center;
       font-size: 10px; font-weight: 600;
@@ -873,18 +990,18 @@
         <div class="progress-bar"><div class="progress-fill" id="fill-progress"></div></div>
         <p class="muted" id="fill-summary">Resolving 0 / 0 fields…</p>
 
-        <div class="card" style="padding:4px 12px; max-height:200px; overflow-y:auto;">
+        <div class="card fill-card" style="padding:4px 0;">
           <div id="fill-list">
             <p class="muted text-center" style="padding:12px 0;">Waiting for backend…</p>
           </div>
         </div>
 
-        <div class="mt-16">
+        <div class="fill-actions">
           <button class="btn btn-primary" id="fill-apply" disabled>Apply to page</button>
+          <p class="muted text-center" style="margin-top:6px;">
+            <button class="link-btn" id="fill-cancel">Cancel</button>
+          </p>
         </div>
-        <p class="muted mt-12 text-center">
-          <button class="link-btn" id="fill-cancel">Cancel</button>
-        </p>
       </section>
 
       <!-- ===========================================================
@@ -1015,6 +1132,12 @@
           <div class="field">
             <label class="label" for="set-limit">Daily LLM call limit</label>
             <input class="input" id="set-limit" type="number" min="0" max="10000" />
+          </div>
+          <div class="field">
+            <label class="label checkbox-label">
+              <input type="checkbox" id="set-form-detection" />
+              Show form detection popup on pages
+            </label>
           </div>
         </div>
 

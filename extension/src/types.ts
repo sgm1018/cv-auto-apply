@@ -39,6 +39,7 @@ export interface Settings {
   custom_endpoint?: string;
   llm_daily_limit: number;
   notifications_enabled: boolean;
+  form_detection_enabled: boolean;
 }
 
 export interface ExtractedField {
@@ -74,4 +75,5 @@ export type Message =
   | { type: "PROFILE_UPDATED" }
   | { type: "TRIGGER_FILL" }
   | { type: "PENDING_FILL_CHECK" }
+  | { type: "GET_SETTING"; key: string }
   | { type: "FETCH_CV_FILE"; url: string; filename: string; mimeType: string };
